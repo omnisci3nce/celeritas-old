@@ -1,0 +1,9 @@
+OBJS = spritesheet.c
+CC = gcc
+INCLUDE_PATHS = -I/usr/local/include
+LIBRARY_PATHS = -L/usr/local/lib
+COMPILER_FLAGS = -w
+LINKER_FLAGS = -lSDL2 -lSDL2_image
+OBJ_NAME = spritesheet
+all : $(OBJS)
+	$(CC) $(OBJS) $(INCLUDE_PATHS) $(LIBRARY_PATHS) $(COMPILER_FLAGS) $(LINKER_FLAGS) -o $(OBJ_NAME)
