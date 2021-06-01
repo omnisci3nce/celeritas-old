@@ -135,7 +135,7 @@ pub fn main() !void {
 
     var VBO: u32 = undefined; // vertex buffer object - send vertex data to vram
     var VAO: u32 = undefined; // vertex array object - save vertex attribute configurations 
-    var EBO: u32 = undefined;
+    var EBO: u32 = undefined; // element buffer object - store indices for indexed drawing
 
     // TODO: move to one time setup to a separate function
     c.glGenVertexArrays(1, &VAO);
