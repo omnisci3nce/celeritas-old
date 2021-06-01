@@ -1,4 +1,7 @@
+const std = @import("std");
+const panic = std.debug.panic;
 const c = @import("c.zig");
+const c_allocator = @import("std").heap.c_allocator;
 
 const Camera = struct {
     // position
@@ -33,15 +36,16 @@ fn initGLShader(source: []const u8, kind: c.GLenum) !c.GLuint {
     c.glCompileShader(shader_id);
 
     // error checking
-    // var ok: c.GLint = undefined;
-    // c.glGetShaderiv(shader_id, c.GL_COMPILE_STATUS, &ok);
-    // if (ok == 0) {
-    //     var error_size: c.GLint = undefined;
-    //     c.glGetShaderiv(fragmentShader, c.GL_INFO_LOG_LENGTH, &error_size);
+    var ok: c.GLint = undefined;
+    c.glGetShaderiv(shader_id, c.GL_COMPILE_STATUS, &ok);
+    if (ok == 0) {
+        var error_size: c.GLint = undefined;
+        c.glGetShaderiv(shader_id, c.GL_INFO_LOG_LENGTH, &error_size);
 
-    //     const message = try c_allocator.alloc(u8, @intCast(usize, error_size));
-    //     c.glGetShaderInfoLog(fragmentShader, error_size, &error_size, message.ptr);
-    //     panic("Error compiling {s} shader:\n{s}\n", .{ "fragment", message });
-    // }
+        // TODO: make calling code pass allocator down
+        const message = try c_allocator.alloc(u8, @intCast(usize, error_size));
+        c.glGetShaderInfoLog(shader_id, error_size, &error_size, message.ptr);
+        panic("Error compiling {s} shader:\n{s}\n", .{ "", message });
+    }
     return shader_id;
 }

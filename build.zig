@@ -7,6 +7,7 @@ pub fn build(b: *Builder) void {
 
     var exe = b.addExecutable("tetris", "src/main.zig");
     // exe.addCSourceFile("stb_image-2.22/stb_image_impl.c", &[_][]const u8{"-std=c99"});
+    exe.addCSourceFile("deps/stb_image-2.26/stb_image_impl.c", &[_][]const u8{"-std=c99"});
     exe.setBuildMode(mode);
 
     // if (windows) {
@@ -18,7 +19,7 @@ pub fn build(b: *Builder) void {
     // }
 
     // exe.addIncludeDir("stb_image-2.22");
-
+    exe.addIncludeDir("deps/stb_image-2.26");
     exe.addIncludeDir("/usr/local/include");
     exe.addIncludeDir("/usr/local/lib");
     exe.addIncludeDir("/opt/homebrew/include");
