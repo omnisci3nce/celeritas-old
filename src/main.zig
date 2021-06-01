@@ -3,6 +3,9 @@ const warn = std.debug.warn;
 const panic = std.debug.panic;
 const c = @import("c.zig");
 const c_allocator = @import("std").heap.c_allocator;
+const r = @import("rendering.zig");
+const m = @import("maths.zig");
+const p = @import("physics.zig");
 
 const width: i32 = 1024;
 const height: i32 = 768;
