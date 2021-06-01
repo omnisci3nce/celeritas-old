@@ -1,5 +1,4 @@
 const std = @import("std");
-const print = @import("std").debug.print;
 const warn = std.debug.warn;
 const panic = std.debug.panic;
 const c = @import("c.zig");
@@ -7,10 +6,7 @@ const c_allocator = @import("std").heap.c_allocator;
 
 const width: i32 = 1024;
 const height: i32 = 768;
-
 var window: *c.GLFWwindow = undefined;
-
-
 
 const vertices = [_]f32{
     -0.5, -0.5, 0.0,
@@ -37,7 +33,7 @@ fn perspectiveGL(fovY: f64, aspect: f64, zNear: f64, zFar: f64) void {
 }
 
 fn init_gl() void {
-    c.glClearColor(0.8, 0.8, 0.8, 1.0);                 // Black Background
+    c.glClearColor(0.8, 0.8, 0.8, 1.0);
 }
 
 fn init() bool {
@@ -51,6 +47,7 @@ fn init() bool {
     c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MINOR, 3);
     c.glfwWindowHint(c.GLFW_OPENGL_FORWARD_COMPAT, c.GL_TRUE);
     c.glfwWindowHint(c.GLFW_OPENGL_PROFILE, c.GLFW_OPENGL_CORE_PROFILE);
+    // TODO: Investigate what this does
     // c.glfwWindowHint(c.GLFW_OPENGL_DEBUG_CONTEXT, debug_gl.is_on);
     // c.glfwWindowHint(c.GLFW_SAMPLES, 4);                // 4x antialiasing
 
@@ -69,6 +66,7 @@ fn init() bool {
 pub fn main() !void {
     var initialised = init();
 
+    // TODO: move shader source to its own file
     const vertex_source : []const u8  =
     \\ #version 330 core
     \\ layout (location = 0) in vec3 aPos;
@@ -79,7 +77,6 @@ pub fn main() !void {
     ;
     const vertex_source_ptr: [*]const u8 = vertex_source.ptr;
     const v_source_len = @intCast(c.GLint, vertex_source.len);
-    const name : [*]const u8 = "vertex";
 
     const fragment_source : []const u8 =
     \\ #version 330 core
@@ -104,14 +101,14 @@ pub fn main() !void {
 
         const message = try c_allocator.alloc(u8, @intCast(usize, error_size));
         c.glGetShaderInfoLog(vertexShader, error_size, &error_size, message.ptr);
-        print("{s}\n", .{ message });
-        // panic("Error compiling {s} shader:\n{s}\n", .{ name, message.ptr });
+        panic("Error compiling {s} shader:\n{s}\n", .{ "vertex", message });
     }
 
     var fragmentShader: u32 = c.glCreateShader(c.GL_FRAGMENT_SHADER);
     c.glShaderSource(fragmentShader, 1, &fragment_source_ptr, &f_source_len);
     c.glCompileShader(fragmentShader);
 
+    // TODO: use just one ok variable
     var ok2: c.GLint = undefined;
     c.glGetShaderiv(fragmentShader, c.GL_COMPILE_STATUS, &ok2);
     if (ok2 == 0) {
@@ -120,8 +117,7 @@ pub fn main() !void {
 
         const message = try c_allocator.alloc(u8, @intCast(usize, error_size));
         c.glGetShaderInfoLog(fragmentShader, error_size, &error_size, message.ptr);
-        print("{s}\n", .{ message });
-        // panic("Error compiling {s} shader:\n{s}\n", .{ name, message.ptr });
+        panic("Error compiling {s} shader:\n{s}\n", .{ "fragment", message });
     }
 
     var shaderProgram: u32 = c.glCreateProgram();
@@ -129,6 +125,7 @@ pub fn main() !void {
     c.glAttachShader(shaderProgram, fragmentShader);
     c.glLinkProgram(shaderProgram);
     
+    // TODO: use just one ok variable
     var ok3: c.GLint = undefined;
     c.glGetProgramiv(shaderProgram, c.GL_LINK_STATUS, &ok3);
     if (ok3 == 0) {
@@ -137,12 +134,14 @@ pub fn main() !void {
 
         const message = try c_allocator.alloc(u8, @intCast(usize, error_size));
         c.glGetProgramInfoLog(shaderProgram, error_size, &error_size, message.ptr);
-        print("{s}\n", .{ message });
-        // panic("Error compiling {s} shader:\n{s}\n", .{ name, message.ptr });
+        panic("Error linking program:\n{s}\n", .{ message });
     }
 
+    // TODO: declare multiple variables at once
     var VBO: u32 = undefined;
     var VAO: u32 = undefined;
+
+    // TODO: move one time setup to a separate function
     c.glGenBuffers(1, &VBO);
     c.glGenVertexArrays(1, &VAO);
     c.glBindVertexArray(VAO);
