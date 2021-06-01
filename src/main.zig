@@ -6,15 +6,16 @@ const c_allocator = @import("std").heap.c_allocator;
 const r = @import("rendering.zig");
 const m = @import("maths.zig");
 const p = @import("physics.zig");
+const stdMath = std.math;
 
 const width: i32 = 1024;
 const height: i32 = 768;
 var window: *c.GLFWwindow = undefined;
 
 const vertices = [_]f32{
-    -0.5, -0.5, 0.0,
-     0.5, -0.5, 0.0,
-     0.0,  0.5, 0.0};
+    0.5, -0.5, 0.0, 1.0, 0.0, 0.0,
+    -0.5, -0.5, 0.0, 0.0, 1.0, 0.0,
+     0.0,  0.5, 0.0, 0.0, 0.0, 1.0 };
 
 fn errorCallback(err: c_int, description: [*c]const u8) callconv(.C) void {
     panic("Error: {s}\n", .{description});
@@ -67,74 +68,70 @@ fn init() bool {
 }
 
 pub fn main() !void {
+    // create an allocator to use
+    const alloc = std.heap.page_allocator;
+    const memory = try alloc.alloc(u8, 100);
+    defer alloc.free(memory);
+
     var initialised = init();
 
-    // TODO: move shader source to its own file
-    const vertex_source : []const u8  =
-    \\ #version 330 core
-    \\ layout (location = 0) in vec3 aPos;
-    \\ void main()
-    \\ {
-    \\  gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-    \\ }
-    ;
+    var vertex_file = try std.fs.cwd().openFile("src/base.vert", .{});
+    defer vertex_file.close();
+    
+    const vertex_source = try vertex_file.reader().readAllAlloc(
+        alloc,
+        10000,
+    );
+    defer alloc.free(vertex_source);
+
     const vertex_source_ptr: [*]const u8 = vertex_source.ptr;
     const v_source_len = @intCast(c.GLint, vertex_source.len);
 
-    const fragment_source : []const u8 =
-    \\ #version 330 core
-    \\ out vec4 FragColor;
-    \\ void main()
-    \\ {
-    \\    FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-    \\ } 
-    ;
+    var fragment_file = try std.fs.cwd().openFile("src/base.frag", .{});
+    defer fragment_file.close();
+    
+    const fragment_source = try fragment_file.reader().readAllAlloc(
+        alloc,
+        10000,
+    );
+    defer alloc.free(fragment_source);
+
     const fragment_source_ptr: [*]const u8 = fragment_source.ptr;
     const f_source_len = @intCast(c.GLint, fragment_source.len);
 
-    var vertexShader: u32 = c.glCreateShader(c.GL_VERTEX_SHADER);
-    c.glShaderSource(vertexShader, 1, &vertex_source_ptr, &v_source_len);
-    c.glCompileShader(vertexShader);
-
-    var ok: c.GLint = undefined;
-    c.glGetShaderiv(vertexShader, c.GL_COMPILE_STATUS, &ok);
-    if (ok == 0) {
-        var error_size: c.GLint = undefined;
-        c.glGetShaderiv(vertexShader, c.GL_INFO_LOG_LENGTH, &error_size);
-
-        const message = try c_allocator.alloc(u8, @intCast(usize, error_size));
-        c.glGetShaderInfoLog(vertexShader, error_size, &error_size, message.ptr);
-        panic("Error compiling {s} shader:\n{s}\n", .{ "vertex", message });
-    }
-
-    var fragmentShader: u32 = c.glCreateShader(c.GL_FRAGMENT_SHADER);
-    c.glShaderSource(fragmentShader, 1, &fragment_source_ptr, &f_source_len);
-    c.glCompileShader(fragmentShader);
-
-    c.glGetShaderiv(fragmentShader, c.GL_COMPILE_STATUS, &ok);
-    if (ok == 0) {
-        var error_size: c.GLint = undefined;
-        c.glGetShaderiv(fragmentShader, c.GL_INFO_LOG_LENGTH, &error_size);
-
-        const message = try c_allocator.alloc(u8, @intCast(usize, error_size));
-        c.glGetShaderInfoLog(fragmentShader, error_size, &error_size, message.ptr);
-        panic("Error compiling {s} shader:\n{s}\n", .{ "fragment", message });
-    }
-
-    var shaderProgram: u32 = c.glCreateProgram();
-    c.glAttachShader(shaderProgram, vertexShader);
-    c.glAttachShader(shaderProgram, fragmentShader);
-    c.glLinkProgram(shaderProgram);
     
-    c.glGetProgramiv(shaderProgram, c.GL_LINK_STATUS, &ok);
-    if (ok == 0) {
-        var error_size: c.GLint = undefined;
-        c.glGetProgramiv(shaderProgram, c.GL_INFO_LOG_LENGTH, &error_size);
 
-        const message = try c_allocator.alloc(u8, @intCast(usize, error_size));
-        c.glGetProgramInfoLog(shaderProgram, error_size, &error_size, message.ptr);
-        panic("Error linking program:\n{s}\n", .{ message });
-    }
+    // var vertexShader: u32 = c.glCreateShader(c.GL_VERTEX_SHADER);
+    // c.glShaderSource(vertexShader, 1, &vertex_source_ptr, &v_source_len);
+    // c.glCompileShader(vertexShader);
+
+    // var ok: c.GLint = undefined;
+    // c.glGetShaderiv(vertexShader, c.GL_COMPILE_STATUS, &ok);
+    // if (ok == 0) {
+    //     var error_size: c.GLint = undefined;
+    //     c.glGetShaderiv(vertexShader, c.GL_INFO_LOG_LENGTH, &error_size);
+
+    //     const message = try c_allocator.alloc(u8, @intCast(usize, error_size));
+    //     c.glGetShaderInfoLog(vertexShader, error_size, &error_size, message.ptr);
+    //     panic("Error compiling {s} shader:\n{s}\n", .{ "vertex", message });
+    // }
+
+    // var fragmentShader: u32 = c.glCreateShader(c.GL_FRAGMENT_SHADER);
+    // c.glShaderSource(fragmentShader, 1, &fragment_source_ptr, &f_source_len);
+    // c.glCompileShader(fragmentShader);
+
+    // c.glGetShaderiv(fragmentShader, c.GL_COMPILE_STATUS, &ok);
+    // if (ok == 0) {
+    //     var error_size: c.GLint = undefined;
+    //     c.glGetShaderiv(fragmentShader, c.GL_INFO_LOG_LENGTH, &error_size);
+
+    //     const message = try c_allocator.alloc(u8, @intCast(usize, error_size));
+    //     c.glGetShaderInfoLog(fragmentShader, error_size, &error_size, message.ptr);
+    //     panic("Error compiling {s} shader:\n{s}\n", .{ "fragment", message });
+    // }
+
+    const shader = try r.ShaderProgram.create(vertex_source, fragment_source);
+    
 
     var VBO: u32 = undefined; // vertex buffer object - send vertex data to vram
     var VAO: u32 = undefined; // vertex array object - save vertex attribute configurations 
@@ -144,9 +141,12 @@ pub fn main() !void {
     c.glGenVertexArrays(1, &VAO);
     c.glBindVertexArray(VAO);
     c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
-    c.glBufferData(c.GL_ARRAY_BUFFER, 9 * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &vertices[0]), c.GL_STATIC_DRAW);
-    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 3 * @sizeOf(f32), null);
+    c.glBufferData(c.GL_ARRAY_BUFFER, 9 * 2 * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &vertices[0]), c.GL_STATIC_DRAW);
+    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 6 * @sizeOf(c.GLfloat), null);
     c.glEnableVertexAttribArray(0);
+    const offset = @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat));
+    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, 6 * @sizeOf(c.GLfloat), offset);
+    c.glEnableVertexAttribArray(1);
     c.glBindBuffer(c.GL_ARRAY_BUFFER, 0);
     c.glBindVertexArray(0);
 
@@ -154,7 +154,8 @@ pub fn main() !void {
         c.glClearColor(0.2, 0.3, 0.3, 1.0);
         c.glClear(c.GL_COLOR_BUFFER_BIT);
 
-        c.glUseProgram(shaderProgram);
+        c.glUseProgram(shader.program_id);
+
         c.glBindVertexArray(VAO);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 3);
 
