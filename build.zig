@@ -10,24 +10,11 @@ pub fn build(b: *Builder) void {
     exe.addCSourceFile("deps/stb_image-2.26/stb_image_impl.c", &[_][]const u8{"-std=c99"});
     exe.setBuildMode(mode);
 
-    // if (windows) {
-        // exe.setTarget(.{
-            // .cpu_arch = .x86_64,
-            // .os_tag = .windows,
-            // .abi = .gnu,
-        // });
-    // }
+    exe.addPackagePath("zlm", "deps/zlm/zlm.zig");
 
     // exe.addIncludeDir("stb_image-2.22");
     exe.addIncludeDir("deps/stb_image-2.26");
-    exe.addIncludeDir("/usr/local/include");
-    exe.addIncludeDir("/usr/local/lib");
-    exe.addIncludeDir("/opt/homebrew/include");
-    exe.addFrameworkDir("/opt/homebrew/include");
-    exe.addIncludeDir("/opt/homebrew/lib");
-    exe.addIncludeDir("/opt/homebrew/include/GLFW");
-    exe.addFrameworkDir("/opt/homebrew/lib");
-    exe.addFrameworkDir("/usr/local/lib");
+    
     exe.linkSystemLibrary("c");
     exe.addFrameworkDir("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks");
             exe.linkFramework("OpenGL");

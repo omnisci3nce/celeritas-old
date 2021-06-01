@@ -4,7 +4,7 @@ const panic = std.debug.panic;
 const c = @import("c.zig");
 const c_allocator = @import("std").heap.c_allocator;
 const r = @import("rendering.zig");
-const m = @import("maths.zig");
+const m = @import("zlm");
 const p = @import("physics.zig");
 const stdMath = std.math;
 const PngImage = @import("png.zig").PngImage;
@@ -14,11 +14,11 @@ const height: i32 = 768;
 var window: *c.GLFWwindow = undefined;
 
 const vertices = [_]f32{
-    // positions          // colors           // texture coords
-     0.5,  0.5, 0.0,   1.0, 0.0, 0.0,   1.0, 1.0,   // top right
-     0.5, -0.5, 0.0,   0.0, 1.0, 0.0,   1.0, 0.0,   // bottom right
-    -0.5, -0.5, 0.0,   0.0, 0.0, 1.0,   0.0, 0.0,   // bottom left
-    -0.5,  0.5, 0.0,   1.0, 1.0, 0.0,   0.0, 1.0    // top left 
+    // positions          // texture coords
+     0.5,  0.5, 0.0,      1.0, 1.0,   // top right
+     0.5, -0.5, 0.0,      1.0, 0.0,   // bottom right
+    -0.5, -0.5, 0.0,      0.0, 0.0,   // bottom left
+    -0.5,  0.5, 0.0,      0.0, 1.0    // top left 
 };
 
 const indices = [_]u32{  
@@ -145,27 +145,34 @@ pub fn main() !void {
 
     // load vertices
     c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
-    c.glBufferData(c.GL_ARRAY_BUFFER, 8 * 4 * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &vertices[0]), c.GL_STATIC_DRAW);
+    c.glBufferData(c.GL_ARRAY_BUFFER, 5 * 4 * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &vertices[0]), c.GL_STATIC_DRAW);
     // load indices
     c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
     c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, 6 * @sizeOf(c.GLint), @ptrCast(*const c_void, &indices[0]), c.GL_STATIC_DRAW);
 
-    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), null); // position
+    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 5 * @sizeOf(c.GLfloat), null); // position
     c.glEnableVertexAttribArray(0);
-    const color_offset = @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat));
-    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), color_offset); // color
-    c.glEnableVertexAttribArray(1);
+    // const color_offset = @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat));
+    // c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), color_offset); // color
+    // c.glEnableVertexAttribArray(1);
 
-    const tex_offset = @intToPtr(*const c_void, 6 * @sizeOf(c.GLfloat));
-    c.glVertexAttribPointer(2, 2, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), tex_offset); // texture coord
-    c.glEnableVertexAttribArray(2);
+    const tex_offset = @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat));
+    c.glVertexAttribPointer(1, 2, c.GL_FLOAT, c.GL_FALSE, 5 * @sizeOf(c.GLfloat), tex_offset); // texture coord
+    c.glEnableVertexAttribArray(1);
 
     while (c.glfwWindowShouldClose(window) == c.GL_FALSE) {
         c.glClearColor(0.2, 0.3, 0.3, 1.0);
         c.glClear(c.GL_COLOR_BUFFER_BIT);
 
         c.glBindTexture(c.GL_TEXTURE_2D, texture);
+
+        const trans = m.Vec3.new(-0.5, 0.5, 0.0); // move to top-left
+        const transform = m.Mat4.createTranslation(trans);
+
         c.glUseProgram(shader.program_id);
+        const transformLoc = c.glGetUniformLocation(shader.program_id, "transform");
+        c.glUniformMatrix4fv(transformLoc, 1, c.GL_FALSE, @ptrCast([*]const f32, &transform.fields[0]));
+
         c.glBindVertexArray(VAO);
         c.glDrawElements(c.GL_TRIANGLES, 6, c.GL_UNSIGNED_INT, null);
 
