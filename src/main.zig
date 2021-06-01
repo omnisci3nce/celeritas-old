@@ -108,10 +108,8 @@ pub fn main() !void {
     c.glShaderSource(fragmentShader, 1, &fragment_source_ptr, &f_source_len);
     c.glCompileShader(fragmentShader);
 
-    // TODO: use just one ok variable
-    var ok2: c.GLint = undefined;
-    c.glGetShaderiv(fragmentShader, c.GL_COMPILE_STATUS, &ok2);
-    if (ok2 == 0) {
+    c.glGetShaderiv(fragmentShader, c.GL_COMPILE_STATUS, &ok);
+    if (ok == 0) {
         var error_size: c.GLint = undefined;
         c.glGetShaderiv(fragmentShader, c.GL_INFO_LOG_LENGTH, &error_size);
 
@@ -125,10 +123,8 @@ pub fn main() !void {
     c.glAttachShader(shaderProgram, fragmentShader);
     c.glLinkProgram(shaderProgram);
     
-    // TODO: use just one ok variable
-    var ok3: c.GLint = undefined;
-    c.glGetProgramiv(shaderProgram, c.GL_LINK_STATUS, &ok3);
-    if (ok3 == 0) {
+    c.glGetProgramiv(shaderProgram, c.GL_LINK_STATUS, &ok);
+    if (ok == 0) {
         var error_size: c.GLint = undefined;
         c.glGetProgramiv(shaderProgram, c.GL_INFO_LOG_LENGTH, &error_size);
 
@@ -137,9 +133,8 @@ pub fn main() !void {
         panic("Error linking program:\n{s}\n", .{ message });
     }
 
-    // TODO: declare multiple variables at once
-    var VBO: u32 = undefined;
-    var VAO: u32 = undefined;
+    var VBO: u32 = undefined; // vertex buffer object - send vertex data to vram
+    var VAO: u32 = undefined; // vertex array object - save vertex attribute configurations 
 
     // TODO: move one time setup to a separate function
     c.glGenBuffers(1, &VBO);
