@@ -6,6 +6,9 @@ const c_allocator = @import("std").heap.c_allocator;
 const r = @import("rendering.zig");
 const m = @import("zlm");
 const p = @import("physics.zig");
+const za = @import("zalgebra");
+const mat4 = za.mat4;
+const vec3 = za.vec3;
 const stdMath = std.math;
 const PngImage = @import("png.zig").PngImage;
 
@@ -152,9 +155,6 @@ pub fn main() !void {
 
     c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 5 * @sizeOf(c.GLfloat), null); // position
     c.glEnableVertexAttribArray(0);
-    // const color_offset = @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat));
-    // c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), color_offset); // color
-    // c.glEnableVertexAttribArray(1);
 
     const tex_offset = @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat));
     c.glVertexAttribPointer(1, 2, c.GL_FLOAT, c.GL_FALSE, 5 * @sizeOf(c.GLfloat), tex_offset); // texture coord
@@ -166,12 +166,15 @@ pub fn main() !void {
 
         c.glBindTexture(c.GL_TEXTURE_2D, texture);
 
-        const trans = m.Vec3.new(-0.5, 0.5, 0.0); // move to top-left
-        const transform = m.Mat4.createTranslation(trans);
+        var trans = mat4.identity();
+        trans = trans.translate(vec3.new(0.5, 0.5, 0.0));
+        trans = trans.rotate(@floatCast(f32, c.glfwGetTime()) * 10.0, vec3.new(0.0, 0.0, 1.0));
 
         c.glUseProgram(shader.program_id);
+
+
         const transformLoc = c.glGetUniformLocation(shader.program_id, "transform");
-        c.glUniformMatrix4fv(transformLoc, 1, c.GL_FALSE, @ptrCast([*]const f32, &transform.fields[0]));
+        c.glUniformMatrix4fv(transformLoc, 1, c.GL_FALSE, trans.get_data());
 
         c.glBindVertexArray(VAO);
         c.glDrawElements(c.GL_TRIANGLES, 6, c.GL_UNSIGNED_INT, null);

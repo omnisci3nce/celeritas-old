@@ -11,9 +11,12 @@ pub fn build(b: *Builder) void {
     exe.setBuildMode(mode);
 
     exe.addPackagePath("zlm", "deps/zlm/zlm.zig");
+    exe.addIncludeDir("deps/stb_image-2.26");
+
+    exe.addPackagePath("zalgebra", "deps/zalgebra/src/main.zig");
+    exe.addIncludeDir("deps/zalgebra");
 
     // exe.addIncludeDir("stb_image-2.22");
-    exe.addIncludeDir("deps/stb_image-2.26");
     
     exe.linkSystemLibrary("c");
     exe.addFrameworkDir("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks");
