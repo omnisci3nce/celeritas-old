@@ -17,6 +17,8 @@ const width: i32 = 1024;
 const height: i32 = 768;
 var window: *c.GLFWwindow = undefined;
 
+const cube_vertices = @import("cube.zig").vertices;
+
 const vertices = [_]f32{
     // positions          // texture coords
      0.5,  0.5, 0.0,      1.0, 1.0,   // top right
@@ -87,6 +89,8 @@ pub fn main() !void {
     defer alloc.free(memory);
 
     var initialised = init();
+    c.glEnable(c.GL_DEPTH_TEST);  
+
 
     var vertex_file = try std.fs.cwd().openFile("src/base.vert", .{});
     defer vertex_file.close();
@@ -139,20 +143,20 @@ pub fn main() !void {
 
     var VBO: u32 = undefined; // vertex buffer object - send vertex data to vram
     var VAO: u32 = undefined; // vertex array object - save vertex attribute configurations 
-    var EBO: u32 = undefined; // element buffer object - store indices for indexed drawing
+    // var EBO: u32 = undefined; // element buffer object - store indices for indexed drawing
 
     // TODO: move to one time setup to a separate function
     c.glGenVertexArrays(1, &VAO);
     c.glGenBuffers(1, &VBO);
-    c.glGenBuffers(1, &EBO);
+    // c.glGenBuffers(1, &EBO);
     c.glBindVertexArray(VAO);
 
     // load vertices
     c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
-    c.glBufferData(c.GL_ARRAY_BUFFER, 5 * 4 * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &vertices[0]), c.GL_STATIC_DRAW);
+    c.glBufferData(c.GL_ARRAY_BUFFER, cube_vertices.len * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &cube_vertices[0]), c.GL_STATIC_DRAW);
     // load indices
-    c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
-    c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, 6 * @sizeOf(c.GLint), @ptrCast(*const c_void, &indices[0]), c.GL_STATIC_DRAW);
+    // c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
+    // c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, 6 * @sizeOf(c.GLint), @ptrCast(*const c_void, &indices[0]), c.GL_STATIC_DRAW);
 
     c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 5 * @sizeOf(c.GLfloat), null); // position
     c.glEnableVertexAttribArray(0);
@@ -164,21 +168,40 @@ pub fn main() !void {
     while (c.glfwWindowShouldClose(window) == c.GL_FALSE) {
         c.glClearColor(0.2, 0.3, 0.3, 1.0);
         c.glClear(c.GL_COLOR_BUFFER_BIT);
+        c.glClear(c.GL_DEPTH_BUFFER_BIT);
 
         c.glBindTexture(c.GL_TEXTURE_2D, texture);
 
         var trans = mat4.identity();
         trans = trans.translate(vec3.new(0.5, 0.5, 0.0));
-        trans = trans.rotate(@floatCast(f32, c.glfwGetTime()) * 10.0, vec3.new(0.0, 0.0, 1.0));
+        trans = trans.rotate(@floatCast(f32, c.glfwGetTime()) * 5.0, vec3.new(0.0, 0.0, 1.0));
+        trans = trans.scale(vec3.new(0.5, 0.5, 0.5));
+
+        var model = mat4.identity();
+        model = model.rotate(-55.0, vec3.new(1.0, 0.0, 0.0));
+        model = model.rotate(@floatCast(f32, c.glfwGetTime()) * 9.0, vec3.new(0.0, 0.0, 1.0));
+
+        var view = mat4.identity();
+        view = view.translate(vec3.new(0.0, 0.0, -3.0));
+
+        var projection = mat4.perspective(45.0, 1024.0 / 768.0, 0.1, 100.0);
 
         c.glUseProgram(shader.program_id);
 
 
         const transformLoc = c.glGetUniformLocation(shader.program_id, "transform");
         c.glUniformMatrix4fv(transformLoc, 1, c.GL_FALSE, trans.get_data());
+        const modelLoc = c.glGetUniformLocation(shader.program_id, "model");
+        c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
+        const viewLoc = c.glGetUniformLocation(shader.program_id, "view");
+        c.glUniformMatrix4fv(viewLoc, 1, c.GL_FALSE, view.get_data());
+        const projectionLoc = c.glGetUniformLocation(shader.program_id, "projection");
+        c.glUniformMatrix4fv(projectionLoc, 1, c.GL_FALSE, projection.get_data());
+
 
         c.glBindVertexArray(VAO);
-        c.glDrawElements(c.GL_TRIANGLES, 6, c.GL_UNSIGNED_INT, null);
+        // c.glDrawElements(c.GL_TRIANGLES, 6, c.GL_UNSIGNED_INT, null);
+        c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
 
         c.glfwSwapBuffers(window);
         c.glfwPollEvents();
