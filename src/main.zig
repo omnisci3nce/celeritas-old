@@ -181,8 +181,13 @@ pub fn main() !void {
         model = model.rotate(-55.0, vec3.new(1.0, 0.0, 0.0));
         model = model.rotate(@floatCast(f32, c.glfwGetTime()) * 9.0, vec3.new(0.0, 0.0, 1.0));
 
-        var view = mat4.identity();
-        view = view.translate(vec3.new(0.0, 0.0, -3.0));
+        var camera = r.Camera.create(
+            vec3.new(0.0, 0.0, 3.0),
+            vec3.new(0.0, 0.0, -1.0),
+            vec3.new(0.0, 1.0, 0.0)
+        );
+
+        const view = mat4.look_at(camera.pos, camera.front, camera.up);
 
         var projection = mat4.perspective(45.0, 1024.0 / 768.0, 0.1, 100.0);
 
@@ -200,7 +205,6 @@ pub fn main() !void {
 
 
         c.glBindVertexArray(VAO);
-        // c.glDrawElements(c.GL_TRIANGLES, 6, c.GL_UNSIGNED_INT, null);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
 
         c.glfwSwapBuffers(window);

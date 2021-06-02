@@ -2,9 +2,23 @@ const std = @import("std");
 const panic = std.debug.panic;
 const c = @import("c.zig");
 const c_allocator = @import("std").heap.c_allocator;
+const za = @import("zalgebra");
+const mat4 = za.mat4;
+const vec3 = za.vec3;
 
-const Camera = struct {
-    // position
+pub const Camera = struct {
+    pos: vec3,
+    front: vec3,
+    up: vec3,
+
+
+    pub fn create(pos: vec3, front: vec3, up: vec3) Camera {
+        var cam: Camera = undefined;
+        cam.pos = pos;
+        cam.front = front;
+        cam.up = up;
+        return cam;
+    }
 };
 
 pub const ShaderProgram = struct {
