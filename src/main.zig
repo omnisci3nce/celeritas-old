@@ -32,17 +32,50 @@ const indices = [_]u32{
     1, 2, 3  // second triangle
 };
 
+var camera = r.Camera.create(
+    vec3.new(0.0, 0.0, 3.0),
+    vec3.new(0.0, 0.0, -1.0),
+    vec3.new(0.0, 1.0, 0.0)
+);
+
+var delta_time: f64 = 0.0;
+var last_frame: f64 = 0.0;
+
 fn errorCallback(err: c_int, description: [*c]const u8) callconv(.C) void {
     panic("Error: {s}\n", .{description});
 }
 
 fn keyCallback(win: ?*c.GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int) callconv(.C) void {
-    if (action != c.GLFW_PRESS) return;
-
-    switch (key) {
-        c.GLFW_KEY_ESCAPE => c.glfwSetWindowShouldClose(win, c.GL_TRUE),
-        else => {},
+    const camera_speed = @floatCast(f32, 5.0 * delta_time);
+    if (action == c.GLFW_PRESS) {
+        switch (key) {
+            c.GLFW_KEY_ESCAPE => c.glfwSetWindowShouldClose(win, c.GL_TRUE),
+            c.GLFW_KEY_W => camera.pos = vec3.add(camera.pos, camera.front.scale(camera_speed)),
+            c.GLFW_KEY_S => camera.pos = vec3.sub(camera.pos, camera.front.scale(camera_speed)),
+            c.GLFW_KEY_A => {
+                camera.pos = vec3.sub(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
+            },
+            c.GLFW_KEY_D => {
+                camera.pos = vec3.add(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
+            },
+            else => {}
+        }
+        return;
+    } else {
+        switch (key) {
+            c.GLFW_KEY_W => camera.pos = vec3.add(camera.pos, camera.front.scale(camera_speed)),
+            c.GLFW_KEY_S => camera.pos = vec3.sub(camera.pos, camera.front.scale(camera_speed)),
+            c.GLFW_KEY_A => {
+                camera.pos = vec3.sub(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
+            },
+            c.GLFW_KEY_D => {
+                camera.pos = vec3.add(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
+            },
+            else => {}
+        }
+        return;
     }
+    return;
 }
 
 fn perspectiveGL(fovY: f64, aspect: f64, zNear: f64, zFar: f64) void {
@@ -166,6 +199,11 @@ pub fn main() !void {
     c.glEnableVertexAttribArray(1);
 
     while (c.glfwWindowShouldClose(window) == c.GL_FALSE) {
+        const currentFrame = c.glfwGetTime();
+        delta_time = currentFrame - last_frame;
+        last_frame = currentFrame;
+
+
         c.glClearColor(0.2, 0.3, 0.3, 1.0);
         c.glClear(c.GL_COLOR_BUFFER_BIT);
         c.glClear(c.GL_DEPTH_BUFFER_BIT);
@@ -181,11 +219,7 @@ pub fn main() !void {
         model = model.rotate(-55.0, vec3.new(1.0, 0.0, 0.0));
         model = model.rotate(@floatCast(f32, c.glfwGetTime()) * 9.0, vec3.new(0.0, 0.0, 1.0));
 
-        var camera = r.Camera.create(
-            vec3.new(0.0, 0.0, 3.0),
-            vec3.new(0.0, 0.0, -1.0),
-            vec3.new(0.0, 1.0, 0.0)
-        );
+        
 
         const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
 
