@@ -187,7 +187,7 @@ pub fn main() !void {
             vec3.new(0.0, 1.0, 0.0)
         );
 
-        const view = mat4.look_at(camera.pos, camera.front, camera.up);
+        const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
 
         var projection = mat4.perspective(45.0, 1024.0 / 768.0, 0.1, 100.0);
 
