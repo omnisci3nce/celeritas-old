@@ -54,18 +54,9 @@ fn errorCallback(err: c_int, description: [*c]const u8) callconv(.C) void {
 }
 
 fn keyCallback(win: ?*c.GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int) callconv(.C) void {
-    const camera_speed = @floatCast(f32, 5.0 * delta_time);
     if (action == c.GLFW_PRESS) {
         switch (key) {
             c.GLFW_KEY_ESCAPE => c.glfwSetWindowShouldClose(win, c.GL_TRUE),
-            c.GLFW_KEY_W => camera.pos = vec3.add(camera.pos, camera.front.scale(camera_speed)),
-            c.GLFW_KEY_S => camera.pos = vec3.sub(camera.pos, camera.front.scale(camera_speed)),
-            c.GLFW_KEY_A => {
-                camera.pos = vec3.sub(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
-            },
-            c.GLFW_KEY_D => {
-                camera.pos = vec3.add(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
-            },
             else => {}
         }
     }
@@ -218,10 +209,17 @@ pub fn main() !void {
 
     var nbFrames: i32 = 0;
     var last_time: f32 = 0.0;
+    // ---- Render loop
     while (c.glfwWindowShouldClose(window) == c.GL_FALSE) {
+        // ---- per-frame time logic
         const currentFrame = c.glfwGetTime();
         delta_time = currentFrame - last_frame;
         last_frame = currentFrame;
+
+        // ---- input
+        process_input(window);
+
+        // ---- render
 
         // TODO: refactor variable names
         nbFrames += 1;
@@ -276,4 +274,25 @@ pub fn main() !void {
         c.glfwPollEvents();
     }
 
+}
+
+fn process_input(win: ?*c.GLFWwindow) void {
+    if (c.glfwGetKey(win, c.GLFW_KEY_ESCAPE) == c.GLFW_PRESS) {
+        c.glfwSetWindowShouldClose(window, 1);
+    }
+
+    const camera_speed = @floatCast(f32, 2.0 * delta_time);
+
+    if (c.glfwGetKey(win, c.GLFW_KEY_W) == c.GLFW_PRESS) {
+        camera.pos = vec3.add(camera.pos, camera.front.scale(camera_speed));
+    }
+    if (c.glfwGetKey(win, c.GLFW_KEY_S) == c.GLFW_PRESS) {
+        camera.pos = vec3.sub(camera.pos, camera.front.scale(camera_speed));
+    }
+    if (c.glfwGetKey(win, c.GLFW_KEY_A) == c.GLFW_PRESS) {
+        camera.pos = vec3.sub(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
+    }
+    if (c.glfwGetKey(win, c.GLFW_KEY_D) == c.GLFW_PRESS) {
+        camera.pos = vec3.add(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
+    }
 }
