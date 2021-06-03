@@ -11,11 +11,19 @@ const mat4 = za.mat4;
 const vec3 = za.vec3;
 // TODO: move these imports into a common imports ?
 const stdMath = std.math;
+const cos = stdMath.cos;
+const sin = stdMath.sin;
 const PngImage = @import("png.zig").PngImage;
 
 const width: i32 = 1024;
 const height: i32 = 768;
 var window: *c.GLFWwindow = undefined;
+
+var last_x: f64 = 512.0;
+var last_y: f64 = 384.0;
+
+var yaw: f32 = -90.0;
+var pitch: f32 = 0.0;
 
 const cube_vertices = @import("cube.zig").vertices;
 
@@ -60,22 +68,27 @@ fn keyCallback(win: ?*c.GLFWwindow, key: c_int, scancode: c_int, action: c_int, 
             },
             else => {}
         }
-        return;
-    } else {
-        switch (key) {
-            c.GLFW_KEY_W => camera.pos = vec3.add(camera.pos, camera.front.scale(camera_speed)),
-            c.GLFW_KEY_S => camera.pos = vec3.sub(camera.pos, camera.front.scale(camera_speed)),
-            c.GLFW_KEY_A => {
-                camera.pos = vec3.sub(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
-            },
-            c.GLFW_KEY_D => {
-                camera.pos = vec3.add(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
-            },
-            else => {}
-        }
-        return;
     }
     return;
+}
+
+fn mouse_callback(win: ?*c.GLFWwindow, x_pos: f64, y_pos: f64) callconv(.C) void {
+    var x_offset = x_pos - last_x;
+    var y_offset = last_y - y_pos;
+    last_x = x_pos;
+    last_y = y_pos;
+
+    const sensitivity = 0.1;
+    x_offset = x_offset * sensitivity;
+    y_offset = y_offset * sensitivity;
+
+    yaw += @floatCast(f32, x_offset);
+    pitch += @floatCast(f32, y_offset);
+
+    if (pitch > 89.0)
+        pitch =  89.0;
+    if (pitch < -89.0)
+        pitch = -89.0;
 }
 
 fn perspectiveGL(fovY: f64, aspect: f64, zNear: f64, zFar: f64) void {
@@ -102,12 +115,17 @@ fn init() bool {
     // TODO: Investigate what this does
     // c.glfwWindowHint(c.GLFW_OPENGL_DEBUG_CONTEXT, debug_gl.is_on);
     // c.glfwWindowHint(c.GLFW_SAMPLES, 4);                // 4x antialiasing
+    // c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_DISABLED);
 
     window = c.glfwCreateWindow(width, height, "Hey tfrom a window!", null, null) orelse {
         panic("unable to create window\n", .{});
     };
 
+    c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_DISABLED);  
+
     _ = c.glfwSetKeyCallback(window, keyCallback);
+    _ = c.glfwSetCursorPosCallback(window, mouse_callback);
+
     c.glfwMakeContextCurrent(window);
     c.glfwSwapInterval(1);
 
@@ -198,11 +216,20 @@ pub fn main() !void {
     c.glVertexAttribPointer(1, 2, c.GL_FLOAT, c.GL_FALSE, 5 * @sizeOf(c.GLfloat), tex_offset); // texture coord
     c.glEnableVertexAttribArray(1);
 
+    var nbFrames: i32 = 0;
+    var last_time: f32 = 0.0;
     while (c.glfwWindowShouldClose(window) == c.GL_FALSE) {
         const currentFrame = c.glfwGetTime();
         delta_time = currentFrame - last_frame;
         last_frame = currentFrame;
 
+        // TODO: refactor variable names
+        nbFrames += 1;
+        if ( currentFrame - last_time >= 1.0 ){
+            std.debug.print("{d} ms/frame \n", .{ 1000.0 / @intToFloat(f32, nbFrames)});
+            nbFrames = 0;
+            last_time += 1.0;
+        }
 
         c.glClearColor(0.2, 0.3, 0.3, 1.0);
         c.glClear(c.GL_COLOR_BUFFER_BIT);
@@ -219,14 +246,18 @@ pub fn main() !void {
         model = model.rotate(-55.0, vec3.new(1.0, 0.0, 0.0));
         model = model.rotate(@floatCast(f32, c.glfwGetTime()) * 9.0, vec3.new(0.0, 0.0, 1.0));
 
-        
+        // camera
+        var direction = vec3.new(0.0, 0.0, 0.0);
+        direction.x = cos(za.to_radians(yaw)) * cos(za.to_radians(pitch));
+        direction.y = sin(za.to_radians(pitch));
+        direction.z = sin(za.to_radians(yaw)) * cos(za.to_radians(pitch));
+        camera.front = vec3.norm(direction);
 
         const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
 
         var projection = mat4.perspective(45.0, 1024.0 / 768.0, 0.1, 100.0);
 
         c.glUseProgram(shader.program_id);
-
 
         const transformLoc = c.glGetUniformLocation(shader.program_id, "transform");
         c.glUniformMatrix4fv(transformLoc, 1, c.GL_FALSE, trans.get_data());
