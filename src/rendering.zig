@@ -96,6 +96,10 @@ pub const ShaderProgram = struct {
         c.glLinkProgram(sp.program_id);
         return sp;
     }
+    pub fn setVec3(sp: ShaderProgram, name: []const u8, x: f32, y: f32, z: f32) void {
+        const location = c.glGetUniformLocation(sp.program_id, name.ptr);
+        c.glUniform3f(location, x, y, z);
+    }
     // pub fn destroy() {}
 };
 

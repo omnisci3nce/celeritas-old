@@ -1,3 +1,5 @@
+const vec3 = @import("zalgebra").vec3;
+
 pub const vertices = [_]f32{ // with normal vectors
     // positions       // normals        // texture coords
     -0.5, -0.5, -0.5,  0.0,  0.0, -1.0,  0.0, 0.0,
@@ -41,4 +43,17 @@ pub const vertices = [_]f32{ // with normal vectors
      0.5,  0.5,  0.5,  0.0,  1.0,  0.0,  1.0, 0.0,
     -0.5,  0.5,  0.5,  0.0,  1.0,  0.0,  0.0, 0.0,
     -0.5,  0.5, -0.5,  0.0,  1.0,  0.0,  0.0, 1.0
+};
+
+pub const positions = [_]vec3 {
+    vec3.new( 0.0,  0.0,  0.0),
+    vec3.new( 2.0,  5.0, -15.0),
+    vec3.new(-1.5, -2.2, -2.5),
+    vec3.new(-3.8, -2.0, -12.3),
+    vec3.new( 2.4, -0.4, -3.5),
+    vec3.new(-1.7,  3.0, -7.5),
+    vec3.new( 1.3, -2.0, -2.5),
+    vec3.new( 1.5,  2.0, -2.5),
+    vec3.new( 1.5,  0.2, -1.5),
+    vec3.new(-1.3,  1.0, -1.5)
 };
