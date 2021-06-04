@@ -92,14 +92,9 @@ fn init() bool {
     // c.glfwWindowHint(c.GLFW_OPENGL_DEBUG_CONTEXT, debug_gl.is_on);
     // c.glfwWindowHint(c.GLFW_SAMPLES, 4);                // 4x antialiasing
 
-    window = c.glfwCreateWindow(width, height, "Hey tfrom a window!", null, null) orelse {
+    window = c.glfwCreateWindow(width, height, "Celeritas - demo", null, null) orelse {
         panic("unable to create window\n", .{});
     };
-
-    var framebufferHeight: i32  = undefined;
-    var framebufferWidth: i32  = undefined;
-    // c.glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
-    // c.glViewport(0, 0, framebufferWidth, framebufferHeight);
 
     c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_DISABLED);  
 
