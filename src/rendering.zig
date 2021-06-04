@@ -21,6 +21,21 @@ pub const Camera = struct {
     }
 };
 
+pub const Material = struct {
+    ambient: vec3,
+    diffuse: vec3,
+    specular: vec3,
+    shininess: float,
+    pub fn create(ambient: vec3, diffuse: vec3, specular: vec3, shininess: float) Material {
+        return Material{
+            .ambient = ambient,
+            .diffuse = diffuse,
+            .specular = specular,
+            .shininess = shininess,
+        };
+    }
+};
+
 pub const ShaderProgram = struct {
     program_id: c.GLuint,
     vertex_id: c.GLuint,

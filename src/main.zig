@@ -27,7 +27,7 @@ var pitch: f32 = 0.0;
 
 const cube_vertices = @import("cube.zig").vertices;
 
-const light_pos = vec3.new(2.4, 2.0, 4.0);
+const light_pos = vec3.new(6.0, 1.0, 4.0);
 
 const indices = [_]u32{  
     0, 1, 3, // first triangle
@@ -224,6 +224,13 @@ pub fn main() !void {
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "lightColor"), 1.0, 1.0, 1.0);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "lightPos"), light_pos.x, light_pos.y, light_pos.z);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "viewPos"), camera.pos.x, camera.pos.y, camera.pos.z);
+        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "material.ambient"), 1.0, 0.5, 0.31);
+        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "material.diffuse"), 1.0, 0.5, 0.31);
+        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "material.specular"), 0.5, 0.5, 0.5);
+        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "material.shininess"), 32.0);
+        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "light.ambient"), 0.2, 0.2, 0.2);
+        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "light.diffuse"), 0.5, 0.5, 0.5);
+        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "light.specular"), 1.0, 1.0, 1.0);
 
         const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
         const projection = mat4.perspective(45.0, (@intToFloat(f32,width) / @intToFloat(f32, height)), 0.1, 100.0);
@@ -233,7 +240,7 @@ pub fn main() !void {
         c.glUniformMatrix4fv(projectionLoc, 1, c.GL_FALSE, projection.get_data());
 
         var model = mat4.identity();
-        model = model.scale(vec3.new(0.5, 0.5, 0.5));
+        // model = model.scale(vec3.new(0.5, 0.5, 0.5));
         var modelLoc = c.glGetUniformLocation(obj_shader.program_id, "model");
         c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
 
@@ -246,7 +253,7 @@ pub fn main() !void {
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "view"), 1, c.GL_FALSE, view.get_data());
         model = mat4.identity();
         model = model.translate(light_pos);
-        model = model.scale(vec3.new(0.1, 0.1, 0.1));
+        model = model.scale(vec3.new(0.2, 0.2, 0.2));
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "model"), 1, c.GL_FALSE, model.get_data());
 
         // draw lamp
