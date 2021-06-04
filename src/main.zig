@@ -158,6 +158,67 @@ pub fn main() !void {
     );
     defer alloc.free(light_fragment_source);
 
+    // ---- texture setup
+    const tex_file2 = try std.fs.cwd().openFile("assets/container2_specular.png", .{});
+    defer tex_file2.close();
+    const tex_buffer2 = try tex_file2.reader().readAllAlloc(
+        alloc,
+        1000000,
+    );
+    defer alloc.free(tex_buffer2);
+    var tex_png2 = try PngImage.create(tex_buffer2);
+    var specular: u32 = undefined;
+    c.glGenTextures(1, &specular);
+    c.glBindTexture(c.GL_TEXTURE_2D, specular);
+
+    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_S, c.GL_REPEAT);
+    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_T, c.GL_REPEAT);
+    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MIN_FILTER, c.GL_LINEAR);
+    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_LINEAR);
+    
+    c.glTexImage2D(
+        c.GL_TEXTURE_2D,
+        0,
+        c.GL_RGBA,
+        @intCast(c_int, tex_png2.width),
+        @intCast(c_int, tex_png2.height),
+        0,
+        c.GL_RGBA,
+        c.GL_UNSIGNED_BYTE,
+        @ptrCast(*c_void, &tex_png2.raw[0]),
+    );
+    c.glGenerateMipmap(c.GL_TEXTURE_2D);
+
+    const tex_file = try std.fs.cwd().openFile("assets/container2.png", .{});
+    defer tex_file.close();
+    const tex_buffer = try tex_file.reader().readAllAlloc(
+        alloc,
+        1000000,
+    );
+    defer alloc.free(tex_buffer);
+    var tex_png = try PngImage.create(tex_buffer);
+    var diffuse: u32 = undefined;
+    c.glGenTextures(1, &diffuse);
+    c.glBindTexture(c.GL_TEXTURE_2D, diffuse);
+
+    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_S, c.GL_REPEAT);
+    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_T, c.GL_REPEAT);
+    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MIN_FILTER, c.GL_LINEAR);
+    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_LINEAR);
+    
+    c.glTexImage2D(
+        c.GL_TEXTURE_2D,
+        0,
+        c.GL_RGBA,
+        @intCast(c_int, tex_png.width),
+        @intCast(c_int, tex_png.height),
+        0,
+        c.GL_RGBA,
+        c.GL_UNSIGNED_BYTE,
+        @ptrCast(*c_void, &tex_png.raw[0]),
+    );
+    c.glGenerateMipmap(c.GL_TEXTURE_2D);
+
     const obj_shader = try r.ShaderProgram.create(vertex_source, obj_fragment_source);
     const light_shader = try r.ShaderProgram.create(light_vertex_source, light_fragment_source);
 
@@ -173,17 +234,21 @@ pub fn main() !void {
     c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
     c.glBufferData(c.GL_ARRAY_BUFFER, cube_vertices.len * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &cube_vertices[0]), c.GL_STATIC_DRAW);
     c.glBindVertexArray(objectVAO);
-    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 6 * @sizeOf(c.GLfloat), null); // position
+    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), null); // position
     c.glEnableVertexAttribArray(0);
     const normal_offset = @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat));
-    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, 6 * @sizeOf(c.GLfloat), normal_offset);
+    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), normal_offset);
     c.glEnableVertexAttribArray(1);
+
+    const tex_offset = @intToPtr(*const c_void, 6 * @sizeOf(c.GLfloat));
+    c.glVertexAttribPointer(2, 2, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), tex_offset); // texture coord
+    c.glEnableVertexAttribArray(2);
 
     // ---- Light VAO
     c.glGenVertexArrays(1, &lightVAO);
     c.glBindVertexArray(lightVAO);
     c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
-    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 6 * @sizeOf(c.GLfloat), null);
+    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), null);
     c.glEnableVertexAttribArray(0);
 
 
@@ -222,15 +287,15 @@ pub fn main() !void {
         c.glUseProgram(obj_shader.program_id);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "objectColor"), 1.0, 0.5, 0.31);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "lightColor"), 1.0, 1.0, 1.0);
-        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "lightPos"), light_pos.x, light_pos.y, light_pos.z);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "viewPos"), camera.pos.x, camera.pos.y, camera.pos.z);
+        c.glUniform1i(c.glGetUniformLocation(obj_shader.program_id, "material.diffuse"), 0);
+        c.glUniform1i(c.glGetUniformLocation(obj_shader.program_id, "material.specular"), 1);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "material.ambient"), 1.0, 0.5, 0.31);
-        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "material.diffuse"), 1.0, 0.5, 0.31);
-        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "material.specular"), 0.5, 0.5, 0.5);
         c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "material.shininess"), 32.0);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "light.ambient"), 0.2, 0.2, 0.2);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "light.diffuse"), 0.5, 0.5, 0.5);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "light.specular"), 1.0, 1.0, 1.0);
+        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "light.position"), light_pos.x, light_pos.y, light_pos.z);
 
         const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
         const projection = mat4.perspective(45.0, (@intToFloat(f32,width) / @intToFloat(f32, height)), 0.1, 100.0);
@@ -242,6 +307,13 @@ pub fn main() !void {
         var model = mat4.identity();
         var modelLoc = c.glGetUniformLocation(obj_shader.program_id, "model");
         c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
+
+        // bind diffuse map texture
+        c.glActiveTexture(c.GL_TEXTURE0);
+        c.glBindTexture(c.GL_TEXTURE_2D, diffuse);
+
+        c.glActiveTexture(c.GL_TEXTURE1);
+        c.glBindTexture(c.GL_TEXTURE_2D, specular); 
 
         c.glBindVertexArray(objectVAO);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
