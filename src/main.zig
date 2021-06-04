@@ -4,8 +4,6 @@ const panic = std.debug.panic;
 const c = @import("c.zig");
 const c_allocator = @import("std").heap.c_allocator;
 const r = @import("rendering.zig");
-const m = @import("zlm");
-const p = @import("physics.zig");
 const za = @import("zalgebra");
 const mat4 = za.mat4;
 const vec3 = za.vec3;
@@ -29,7 +27,7 @@ var pitch: f32 = 0.0;
 
 const cube_vertices = @import("cube.zig").vertices;
 
-const light_pos = vec3.new(5.0, 1.0, 2.0);
+const light_pos = vec3.new(2.4, 2.0, 4.0);
 
 const indices = [_]u32{  
     0, 1, 3, // first triangle
@@ -37,7 +35,7 @@ const indices = [_]u32{
 };
 
 var camera = r.Camera.create(
-    vec3.new(0.0, 0.0, 3.0),
+    vec3.new(0.5, 1.0, 3.0),
     vec3.new(0.0, 0.0, -1.0),
     vec3.new(0.0, 1.0, 0.0)
 );
@@ -89,6 +87,7 @@ fn init() bool {
     c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MINOR, 3);
     c.glfwWindowHint(c.GLFW_OPENGL_FORWARD_COMPAT, c.GL_TRUE);
     c.glfwWindowHint(c.GLFW_OPENGL_PROFILE, c.GLFW_OPENGL_CORE_PROFILE);
+    c.glfwWindowHint(c.GLFW_COCOA_RETINA_FRAMEBUFFER, c.GL_FALSE);
     // TODO: Investigate what this does
     // c.glfwWindowHint(c.GLFW_OPENGL_DEBUG_CONTEXT, debug_gl.is_on);
     // c.glfwWindowHint(c.GLFW_SAMPLES, 4);                // 4x antialiasing
@@ -97,7 +96,12 @@ fn init() bool {
         panic("unable to create window\n", .{});
     };
 
-    // c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_DISABLED);  
+    var framebufferHeight: i32  = undefined;
+    var framebufferWidth: i32  = undefined;
+    // c.glfwGetFramebufferSize(window, &framebufferWidth, &framebufferHeight);
+    // c.glViewport(0, 0, framebufferWidth, framebufferHeight);
+
+    c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_DISABLED);  
 
     _ = c.glfwSetKeyCallback(window, keyCallback);
     _ = c.glfwSetCursorPosCallback(window, mouse_callback);
@@ -136,6 +140,15 @@ pub fn main() !void {
     );
     defer alloc.free(obj_fragment_source);
 
+    var light_vertex_file = try std.fs.cwd().openFile("src/light.vert", .{});
+    defer light_vertex_file.close();
+    
+    const light_vertex_source = try light_vertex_file.reader().readAllAlloc(
+        alloc,
+        10000,
+    );
+    defer alloc.free(light_vertex_source);
+
     var light_fragment_file = try std.fs.cwd().openFile("src/light.frag", .{});
     defer light_fragment_file.close();
     
@@ -146,7 +159,7 @@ pub fn main() !void {
     defer alloc.free(light_fragment_source);
 
     const obj_shader = try r.ShaderProgram.create(vertex_source, obj_fragment_source);
-    const light_shader = try r.ShaderProgram.create(vertex_source, light_fragment_source);
+    const light_shader = try r.ShaderProgram.create(light_vertex_source, light_fragment_source);
 
     var VBO: u32 = undefined; // vertex buffer object - send vertex data to vram
     var objectVAO: u32 = undefined; // vertex array object - save vertex attribute configurations 
@@ -160,16 +173,19 @@ pub fn main() !void {
     c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
     c.glBufferData(c.GL_ARRAY_BUFFER, cube_vertices.len * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &cube_vertices[0]), c.GL_STATIC_DRAW);
     c.glBindVertexArray(objectVAO);
-    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 3 * @sizeOf(c.GLfloat), null); // position
+    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 6 * @sizeOf(c.GLfloat), null); // position
     c.glEnableVertexAttribArray(0);
+    const normal_offset = @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat));
+    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, 6 * @sizeOf(c.GLfloat), normal_offset);
+    c.glEnableVertexAttribArray(1);
 
     // ---- Light VAO
     c.glGenVertexArrays(1, &lightVAO);
     c.glBindVertexArray(lightVAO);
     c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
-    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 3 * @sizeOf(c.GLfloat), null); // position
+    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 6 * @sizeOf(c.GLfloat), null);
     c.glEnableVertexAttribArray(0);
-    
+
 
     var nbFrames: i32 = 0;
     var last_time: f32 = 0.0;
@@ -206,6 +222,8 @@ pub fn main() !void {
         c.glUseProgram(obj_shader.program_id);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "objectColor"), 1.0, 0.5, 0.31);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "lightColor"), 1.0, 1.0, 1.0);
+        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "lightPos"), light_pos.x, light_pos.y, light_pos.z);
+        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "viewPos"), camera.pos.x, camera.pos.y, camera.pos.z);
 
         const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
         const projection = mat4.perspective(45.0, (@intToFloat(f32,width) / @intToFloat(f32, height)), 0.1, 100.0);
@@ -215,22 +233,23 @@ pub fn main() !void {
         c.glUniformMatrix4fv(projectionLoc, 1, c.GL_FALSE, projection.get_data());
 
         var model = mat4.identity();
+        model = model.scale(vec3.new(0.5, 0.5, 0.5));
         var modelLoc = c.glGetUniformLocation(obj_shader.program_id, "model");
         c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
 
         c.glBindVertexArray(objectVAO);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
-        
 
-        // -- light
+        // -- light (lamp)
         c.glUseProgram(light_shader.program_id);
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "projection"), 1, c.GL_FALSE, projection.get_data());
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "view"), 1, c.GL_FALSE, view.get_data());
         model = mat4.identity();
         model = model.translate(light_pos);
-        model = model.scale(vec3.new(0.2, 0.2, 0.2));
+        model = model.scale(vec3.new(0.1, 0.1, 0.1));
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "model"), 1, c.GL_FALSE, model.get_data());
 
+        // draw lamp
         c.glBindVertexArray(lightVAO);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
 
