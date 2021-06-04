@@ -54,3 +54,5 @@ dkms.conf
 
 zig-cache/
 zig-out/
+
+.vscode/

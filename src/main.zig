@@ -11,6 +11,7 @@ const stdMath = std.math;
 const cos = stdMath.cos;
 const sin = stdMath.sin;
 const PngImage = @import("png.zig").PngImage;
+const obj_loader = @import("obj.zig");
 
 // TODO: handle window resizing
 const width: i32 = 1024;
@@ -113,6 +114,9 @@ fn init() bool {
 }
 
 pub fn main() !void {
+    const verts: []f32 = try obj_loader.load_obj("assets/backpack/backpack.obj");
+    std.debug.print("{any}\n", .{ verts[500] });
+
     // create an allocator to use
     const alloc = std.heap.page_allocator;
     const memory = try alloc.alloc(u8, 100);
@@ -316,19 +320,28 @@ pub fn main() !void {
         c.glUseProgram(light_shader.program_id);
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "projection"), 1, c.GL_FALSE, projection.get_data());
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "view"), 1, c.GL_FALSE, view.get_data());
-        c.glBindVertexArray(lightVAO);
-        i = 0;
-        while (i < 4) { // 4 lamps
-            model = mat4.identity();
-            model = model.scale(vec3.new(0.2, 0.2, 0.2));
-            model = model.translate(pointLightPositions[i]);
-            modelLoc = c.glGetUniformLocation(light_shader.program_id, "model");
-            c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
-            // draw lamp
-            c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
-            i += 1;
-        }
+        // c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
+        // c.glBufferData(c.GL_ARRAY_BUFFER, verts.len * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &verts[0]), c.GL_STATIC_DRAW);
+        // c.glBindVertexArray(lightVAO);
+        // c.glDrawArrays(c.GL_TRIANGLES, 0, verts.len / 8);
+        // i = 0;
+        // while (i < 4) { // 4 lamps
+        //     model = mat4.identity();
+        //     model = model.scale(vec3.new(0.2, 0.2, 0.2));
+        //     model = model.translate(pointLightPositions[i]);
+        //     modelLoc = c.glGetUniformLocation(light_shader.program_id, "model");
+        //     c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
+        //     // draw lamp
+        //     c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
+        //     i += 1;
+        // }
 
+        // -- backpack
+        // update data
+        // c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
+        // c.glBufferData(c.GL_ARRAY_BUFFER, verts.len * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &verts[0]), c.GL_STATIC_DRAW);
+
+        // c.glUseProgram(light_shader.program_id);
 
         // c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
 

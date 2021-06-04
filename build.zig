@@ -16,13 +16,15 @@ pub fn build(b: *Builder) void {
     exe.addPackagePath("zalgebra", "deps/zalgebra/src/main.zig");
     exe.addIncludeDir("deps/zalgebra");
 
-    // exe.addIncludeDir("stb_image-2.22");
-    
+    exe.addCSourceFile("src/model_loader_impl.c", &[_][]const u8{"-std=c99"});
+    exe.addIncludeDir("src");
+
     exe.linkSystemLibrary("c");
     exe.addFrameworkDir("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks");
             exe.linkFramework("OpenGL");
     exe.linkSystemLibrary("glfw");
     exe.linkSystemLibrary("epoxy");
+    exe.linkSystemLibrary("assimp");
     exe.install();
 
     const play = b.step("play", "Play the game");
