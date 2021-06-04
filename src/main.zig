@@ -27,7 +27,7 @@ var pitch: f32 = 0.0;
 
 const cube_vertices = @import("cube.zig").vertices;
 
-const light_pos = vec3.new(6.0, 1.0, 4.0);
+const light_pos = vec3.new(1.2, 1.0, 2.0);
 
 const indices = [_]u32{  
     0, 1, 3, // first triangle
@@ -35,7 +35,7 @@ const indices = [_]u32{
 };
 
 var camera = r.Camera.create(
-    vec3.new(0.5, 1.0, 3.0),
+    vec3.new(0.0, 0.0, 3.0),
     vec3.new(0.0, 0.0, -1.0),
     vec3.new(0.0, 1.0, 0.0)
 );
@@ -240,7 +240,6 @@ pub fn main() !void {
         c.glUniformMatrix4fv(projectionLoc, 1, c.GL_FALSE, projection.get_data());
 
         var model = mat4.identity();
-        // model = model.scale(vec3.new(0.5, 0.5, 0.5));
         var modelLoc = c.glGetUniformLocation(obj_shader.program_id, "model");
         c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
 
@@ -252,8 +251,8 @@ pub fn main() !void {
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "projection"), 1, c.GL_FALSE, projection.get_data());
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "view"), 1, c.GL_FALSE, view.get_data());
         model = mat4.identity();
-        model = model.translate(light_pos);
         model = model.scale(vec3.new(0.2, 0.2, 0.2));
+        model = model.translate(light_pos);
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "model"), 1, c.GL_FALSE, model.get_data());
 
         // draw lamp
