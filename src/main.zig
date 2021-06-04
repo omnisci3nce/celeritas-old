@@ -158,67 +158,11 @@ pub fn main() !void {
     );
     defer alloc.free(light_fragment_source);
 
-    // ---- texture setup
-    const tex_file2 = try std.fs.cwd().openFile("assets/container2_specular.png", .{});
-    defer tex_file2.close();
-    const tex_buffer2 = try tex_file2.reader().readAllAlloc(
-        alloc,
-        1000000,
-    );
-    defer alloc.free(tex_buffer2);
-    var tex_png2 = try PngImage.create(tex_buffer2);
-    var specular: u32 = undefined;
-    c.glGenTextures(1, &specular);
-    c.glBindTexture(c.GL_TEXTURE_2D, specular);
+    // ---- textures
+    const diffuse = try r.Texture.create("assets/container2.png");
+    const specular = try r.Texture.create("assets/container2_specular.png");
 
-    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_S, c.GL_REPEAT);
-    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_T, c.GL_REPEAT);
-    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MIN_FILTER, c.GL_LINEAR);
-    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_LINEAR);
-    
-    c.glTexImage2D(
-        c.GL_TEXTURE_2D,
-        0,
-        c.GL_RGBA,
-        @intCast(c_int, tex_png2.width),
-        @intCast(c_int, tex_png2.height),
-        0,
-        c.GL_RGBA,
-        c.GL_UNSIGNED_BYTE,
-        @ptrCast(*c_void, &tex_png2.raw[0]),
-    );
-    c.glGenerateMipmap(c.GL_TEXTURE_2D);
-
-    const tex_file = try std.fs.cwd().openFile("assets/container2.png", .{});
-    defer tex_file.close();
-    const tex_buffer = try tex_file.reader().readAllAlloc(
-        alloc,
-        1000000,
-    );
-    defer alloc.free(tex_buffer);
-    var tex_png = try PngImage.create(tex_buffer);
-    var diffuse: u32 = undefined;
-    c.glGenTextures(1, &diffuse);
-    c.glBindTexture(c.GL_TEXTURE_2D, diffuse);
-
-    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_S, c.GL_REPEAT);
-    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_T, c.GL_REPEAT);
-    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MIN_FILTER, c.GL_LINEAR);
-    c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_LINEAR);
-    
-    c.glTexImage2D(
-        c.GL_TEXTURE_2D,
-        0,
-        c.GL_RGBA,
-        @intCast(c_int, tex_png.width),
-        @intCast(c_int, tex_png.height),
-        0,
-        c.GL_RGBA,
-        c.GL_UNSIGNED_BYTE,
-        @ptrCast(*c_void, &tex_png.raw[0]),
-    );
-    c.glGenerateMipmap(c.GL_TEXTURE_2D);
-
+    // ---- shaders    
     const obj_shader = try r.ShaderProgram.create(vertex_source, obj_fragment_source);
     const light_shader = try r.ShaderProgram.create(light_vertex_source, light_fragment_source);
 
@@ -308,12 +252,11 @@ pub fn main() !void {
         var modelLoc = c.glGetUniformLocation(obj_shader.program_id, "model");
         c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
 
-        // bind diffuse map texture
         c.glActiveTexture(c.GL_TEXTURE0);
-        c.glBindTexture(c.GL_TEXTURE_2D, diffuse);
+        c.glBindTexture(c.GL_TEXTURE_2D, diffuse.texture_id);
 
         c.glActiveTexture(c.GL_TEXTURE1);
-        c.glBindTexture(c.GL_TEXTURE_2D, specular); 
+        c.glBindTexture(c.GL_TEXTURE_2D, specular.texture_id); 
 
         c.glBindVertexArray(objectVAO);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 36);

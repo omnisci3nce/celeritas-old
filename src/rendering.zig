@@ -5,12 +5,12 @@ const c_allocator = @import("std").heap.c_allocator;
 const za = @import("zalgebra");
 const mat4 = za.mat4;
 const vec3 = za.vec3;
+const PngImage = @import("png.zig").PngImage;
 
 pub const Camera = struct {
     pos: vec3,
     front: vec3,
     up: vec3,
-
 
     pub fn create(pos: vec3, front: vec3, up: vec3) Camera {
         var cam: Camera = undefined;
@@ -34,6 +34,49 @@ pub const Material = struct {
             .shininess = shininess,
         };
     }
+};
+
+pub const Texture = struct {
+    texture_id: u32,
+    loaded: bool,
+
+    pub fn create(file_path: []const u8) !Texture {
+        var tex: Texture = undefined;
+        const alloc = c_allocator; // TODO: CHANGE
+
+        const file = try std.fs.cwd().openFile(file_path, .{});
+        defer file.close();
+
+        const buffer = try file.reader().readAllAlloc(alloc, 1000000); // TODO: take an allocator in. change max texture buffer size
+        defer alloc.free(buffer);
+
+        var png = try PngImage.create(buffer);
+
+        c.glGenTextures(1, &tex.texture_id);
+        c.glBindTexture(c.GL_TEXTURE_2D, tex.texture_id);
+        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_S, c.GL_REPEAT);
+        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_T, c.GL_REPEAT);
+        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MIN_FILTER, c.GL_LINEAR);
+        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_LINEAR);
+
+        // actually load the texture
+        c.glTexImage2D(
+            c.GL_TEXTURE_2D,
+            0,
+            c.GL_RGBA,
+            @intCast(c_int, png.width),
+            @intCast(c_int, png.height),
+            0,
+            c.GL_RGBA,
+            c.GL_UNSIGNED_BYTE,
+            @ptrCast(*c_void, &png.raw[0]),
+        );
+        c.glGenerateMipmap(c.GL_TEXTURE_2D);
+
+        return tex;
+    }
+
+    // TODO: add cleanup function
 };
 
 pub const ShaderProgram = struct {
