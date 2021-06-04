@@ -18,17 +18,18 @@ const PngImage = @import("png.zig").PngImage;
 // TODO: handle window resizing
 const width: i32 = 1024;
 const height: i32 = 768;
+var last_x: f64 = width / 2;
+var last_y: f64 = height / 2;
+
 var window: *c.GLFWwindow = undefined;
 
-var last_x: f64 = 512.0;
-var last_y: f64 = 384.0;
 
 var yaw: f32 = -90.0;
 var pitch: f32 = 0.0;
 
 const cube_vertices = @import("cube.zig").vertices;
 
-const light_pos = vec3.new(2.2, 2.0, 2.0);
+const light_pos = vec3.new(5.0, 1.0, 2.0);
 
 const indices = [_]u32{  
     0, 1, 3, // first triangle
@@ -117,7 +118,7 @@ pub fn main() !void {
     c.glEnable(c.GL_DEPTH_TEST);  
 
     // TODO: move shaders to their own folder
-    var vertex_file = try std.fs.cwd().openFile("src/base.vert", .{});
+    var vertex_file = try std.fs.cwd().openFile("src/cube.vert", .{});
     defer vertex_file.close();
     
     const vertex_source = try vertex_file.reader().readAllAlloc(
@@ -126,7 +127,7 @@ pub fn main() !void {
     );
     defer alloc.free(vertex_source);
 
-    var obj_fragment_file = try std.fs.cwd().openFile("src/base.frag", .{});
+    var obj_fragment_file = try std.fs.cwd().openFile("src/cube.frag", .{});
     defer obj_fragment_file.close();
     
     const obj_fragment_source = try obj_fragment_file.reader().readAllAlloc(
@@ -153,12 +154,11 @@ pub fn main() !void {
 
     // TODO: move to one time setup to a separate function
 
+    c.glGenVertexArrays(1, &objectVAO);
     c.glGenBuffers(1, &VBO);
     // ---- Object VAO
-    c.glGenVertexArrays(1, &objectVAO);
     c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
     c.glBufferData(c.GL_ARRAY_BUFFER, cube_vertices.len * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &cube_vertices[0]), c.GL_STATIC_DRAW);
-
     c.glBindVertexArray(objectVAO);
     c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 3 * @sizeOf(c.GLfloat), null); // position
     c.glEnableVertexAttribArray(0);
@@ -175,16 +175,17 @@ pub fn main() !void {
     var last_time: f32 = 0.0;
     // ---- Render loop
     while (c.glfwWindowShouldClose(window) == c.GL_FALSE) {
+        // camera
+        var direction = vec3.new(0.0, 0.0, 0.0);
+        direction.x = cos(za.to_radians(yaw)) * cos(za.to_radians(pitch));
+        direction.y = sin(za.to_radians(pitch));
+        direction.z = sin(za.to_radians(yaw)) * cos(za.to_radians(pitch));
+        camera.front = vec3.norm(direction);        
+
         // ---- per-frame time logic
         const currentFrame = c.glfwGetTime();
         delta_time = currentFrame - last_frame;
         last_frame = currentFrame;
-
-        // ---- input
-        process_input(window);
-
-        // ---- render
-
         // TODO: refactor variable names
         nbFrames += 1;
         if ( currentFrame - last_time >= 1.0 ){
@@ -193,52 +194,42 @@ pub fn main() !void {
             last_time += 1.0;
         }
 
-        c.glClearColor(0.2, 0.3, 0.3, 1.0);
+        // ---- input
+        process_input(window);
+
+        // ---- render
+        c.glClearColor(0.1, 0.1, 0.1, 1.0);
         c.glClear(c.GL_COLOR_BUFFER_BIT);
         c.glClear(c.GL_DEPTH_BUFFER_BIT);
 
-        var model = mat4.identity();
-        // model = model.rotate(-55.0, vec3.new(1.0, 0.0, 0.0));
-        // model = model.rotate(@floatCast(f32, c.glfwGetTime()) * 9.0, vec3.new(0.0, 0.0, 1.0));
-
-        // camera
-        var direction = vec3.new(0.0, 0.0, 0.0);
-        direction.x = cos(za.to_radians(yaw)) * cos(za.to_radians(pitch));
-        direction.y = sin(za.to_radians(pitch));
-        direction.z = sin(za.to_radians(yaw)) * cos(za.to_radians(pitch));
-        camera.front = vec3.norm(direction);
-
-        const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
-
-        var projection = mat4.perspective(45.0, 1024.0 / 768.0, 0.1, 100.0);
-
-        // ---- object
+        // -- object
         c.glUseProgram(obj_shader.program_id);
-
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "objectColor"), 1.0, 0.5, 0.31);
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "lightColor"), 1.0, 1.0, 1.0);
 
+        const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
+        const projection = mat4.perspective(45.0, (@intToFloat(f32,width) / @intToFloat(f32, height)), 0.1, 100.0);
+        const viewLoc = c.glGetUniformLocation(obj_shader.program_id, "view");
+        c.glUniformMatrix4fv(viewLoc, 1, c.GL_FALSE, view.get_data());
+        const projectionLoc = c.glGetUniformLocation(obj_shader.program_id, "projection");
+        c.glUniformMatrix4fv(projectionLoc, 1, c.GL_FALSE, projection.get_data());
+
+        var model = mat4.identity();
         var modelLoc = c.glGetUniformLocation(obj_shader.program_id, "model");
         c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
-        var viewLoc = c.glGetUniformLocation(obj_shader.program_id, "view");
-        c.glUniformMatrix4fv(viewLoc, 1, c.GL_FALSE, view.get_data());
-        var projectionLoc = c.glGetUniformLocation(obj_shader.program_id, "projection");
-        c.glUniformMatrix4fv(projectionLoc, 1, c.GL_FALSE, projection.get_data());
+
         c.glBindVertexArray(objectVAO);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
+        
 
-        // ---- light
+        // -- light
         c.glUseProgram(light_shader.program_id);
+        c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "projection"), 1, c.GL_FALSE, projection.get_data());
+        c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "view"), 1, c.GL_FALSE, view.get_data());
         model = mat4.identity();
         model = model.translate(light_pos);
         model = model.scale(vec3.new(0.2, 0.2, 0.2));
-
-        modelLoc = c.glGetUniformLocation(light_shader.program_id, "model");
-        c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
-        viewLoc = c.glGetUniformLocation(light_shader.program_id, "view");
-        c.glUniformMatrix4fv(viewLoc, 1, c.GL_FALSE, view.get_data());
-        projectionLoc = c.glGetUniformLocation(light_shader.program_id, "projection");
-        c.glUniformMatrix4fv(projectionLoc, 1, c.GL_FALSE, projection.get_data());
+        c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "model"), 1, c.GL_FALSE, model.get_data());
 
         c.glBindVertexArray(lightVAO);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
