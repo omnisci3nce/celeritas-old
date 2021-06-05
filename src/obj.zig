@@ -3,127 +3,86 @@ const allocator = @import("std").heap.c_allocator;
 const za = @import("zalgebra");
 const vec2 = za.vec2;
 const vec3 = za.vec3;
+const SplitIterator = std.mem.SplitIterator;
 
-const Vertex = struct {
-    position: vec3,
-    normal: vec3,
-    tex_coords: vec2
+pub const Mesh = struct {
+    vertices: []f32,
+    indices: []u32
 };
 
-const Texture = struct {
-    id: u32,
-    tex_type: []const u8
-};
+// Simplest case - teapot.obj
+pub fn load_obj(file_path: []const u8) !Mesh {
+    var tmp_vertices = std.ArrayList(f32).init(allocator);
+    var tmp_vertex_indices  = std.ArrayList(u32).init(allocator);
+    // defer tmp_vertices.deinit();
+    // defer tmp_vertex_indices.deinit();
 
-const Element = struct {
-    pos_idx: usize,
-    tex_idx: usize,
-    normal_idx: usize
-};
-
-pub fn load_obj(file_path: []const u8) ![]f32 {
-    var tmp_vertices = std.ArrayList(vec3).init(allocator);
-    var tmp_uvs = std.ArrayList(vec2).init(allocator);
-    var tmp_normals = std.ArrayList(vec3).init(allocator);
-    var elements  = std.ArrayList(Element).init(allocator);
-
-
+    // load the file
     const file = try std.fs.cwd().openFile(file_path, .{});
     defer file.close();
 
     const reader = file.reader();
+    const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
+    defer allocator.free(text);
+    var lines = std.mem.split(text, "\n");
 
-    var buf = try allocator.alloc(u8, 1024); // max line size
-    defer allocator.free(buf);
-
-    var index: u32 = 0;
-    while (true) {
-        var line = try reader.readUntilDelimiterOrEof(buf, '\n');
-        // std.debug.print("line {any}\n", .{ line });
-        index += 1;
-        if (line == null) break;
-
-        // Parse the line, copy any needed bytes due to shared buffer
-        var split = std.mem.split(line.?, " "); // split line into discrete things delimited by spaces
-        // if (split != null) {
-        // }
-        const command = split.next().?;
-        if (std.mem.eql(u8, command, "v")) {
-            // std.debug.print("Vertex position found \n", .{});
-            // x y z of vertex comes after line header
-            const x_str = split.next().?;
-            const y_str = split.next().?;
-            const z_str = split.next().?;
-            // std.debug.print("{any}\n", .{x_str});
-            const x = try std.fmt.parseFloat(f32, x_str);
-            const y = try std.fmt.parseFloat(f32, y_str);
-            const z = try std.fmt.parseFloat(f32, z_str);
-            const pos = vec3.new(x, y, z);
-            std.debug.print("vertex pos: {any}\n", .{ pos });
-            try tmp_vertices.append(pos);
-        } else if (std.mem.eql(u8, command, "vt")) {
-            const x_str = split.next().?;
-            const y_str = split.next().?;
-            const x = try std.fmt.parseFloat(f32, x_str);
-            const y = try std.fmt.parseFloat(f32, y_str);
-            try tmp_uvs.append(vec2.new(x, y));
-        } else if (std.mem.eql(u8, command, "vn")) {
-            const x_str = split.next().?;
-            const y_str = split.next().?;
-            const z_str = split.next().?;
-            const x = try std.fmt.parseFloat(f32, x_str);
-            const y = try std.fmt.parseFloat(f32, y_str);
-            const z = try std.fmt.parseFloat(f32, z_str);
-            try tmp_normals.append(vec3.new(x, y, z));
-        } else if (std.mem.eql(u8, command, "f")) { // face
-            while (true) {
-                if (split.next()) |vertex| {
-                    var faceSplit = std.mem.split(vertex, "/");
-                    var posIdx = try std.fmt.parseInt(i32, faceSplit.next().?, 10);
-                    const texIdxStr = faceSplit.next().?;
-                    var texIdx = if (texIdxStr.len == 0) 0 else try std.fmt.parseInt(i32, texIdxStr, 10);
-                    const normalIdxStr = faceSplit.next();
-                    var normalIdx = if (normalIdxStr) |str| try std.fmt.parseInt(i32, str, 10) else 0;
-                    if (normalIdx < 1) {
-                        normalIdx = 1; // TODO
-                    }
-                    if (texIdx < 1) {
-                        texIdx = 1; // TODO
-                    }
-                    if (posIdx < 1) {
-                        posIdx = 1; // TODO
-                    }
-                    try elements.append(.{
-                        .pos_idx = @intCast(usize, posIdx-1),
-                        .tex_idx = @intCast(usize, texIdx-1),
-                        .normal_idx = @intCast(usize, normalIdx-1),
-                    });
-                } else {
-                    break;
-                }
-            }
+    // read each line by line
+    while (lines.next()) |line| {
+        // read first character
+        var line_items = std.mem.split(line, " ");
+        const line_header = line_items.next().?;
+        // std.debug.print("{any}\n", .{line_items});
+        if (std.mem.eql(u8, line_header, "v")) {
+            const x = try std.fmt.parseFloat(f32, line_items.next().?);
+            const y = try std.fmt.parseFloat(f32, line_items.next().?);
+            const z = try std.fmt.parseFloat(f32, line_items.next().?);
+            // std.debug.print("{any}/{any}/{any}\n", .{x, y, z});
+            try tmp_vertices.append(x);
+            try tmp_vertices.append(y);
+            try tmp_vertices.append(z);
+        } else if (std.mem.eql(u8, line_header, "f")) {
+            const v1 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
+            const v2 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
+            const v3 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
+            // std.debug.print("{any}/{any}/{any}\n", .{v1, v2, v3});
+            try tmp_vertex_indices.append(v1 - 1);
+            try tmp_vertex_indices.append(v2 - 1);
+            try tmp_vertex_indices.append(v3 - 1);
         }
+        // if v -> append a vertex (x, y, z)
+        // if f -> append 3 vertex indices
+        // switch(line_header) {
+        //     'v' => {        // vertex
+                // std.debug.print("vertex!\n", .{});
+                
+            // },
+            // 'f' => {        // face
+                // const v1 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
+                // const v2 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
+                // const v3 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
+                // try tmp_vertex_indices.append(v1);
+                // try tmp_vertex_indices.append(v2);
+                // try tmp_vertex_indices.append(v3);
+        //     },
+        //     else => {},     // ignore
+        // }
     }
-    var final = try allocator.alloc(f32, elements.items.len*8);
-    defer allocator.free(final);
-    var i: usize = 0;
-    for (elements.items) |f| {
-        const v = tmp_vertices.items[f.pos_idx];
-        const t = if (tmp_uvs.items.len == 0) vec2.zero() else tmp_uvs.items[f.tex_idx];
-        const n = if (tmp_normals.items.len == 0) vec3.zero() else tmp_normals.items[f.normal_idx];
-        // position
-        final[i] = v.x;
-        final[i+1] = v.y;
-        final[i+2] = v.z;
-        // normal
-        final[i+3] = n.x;
-        final[i+4] = n.y;
-        final[i+5] = n.z;
-        // texture coordinate
-        final[i+6] = t.x;
-        final[i+7] = t.y;
-        i = i + 8;
-    }
-    // std.debug.print("{any} \n ", .{final});
-    return final;
+
+    // return as a Mesh struct
+    return Mesh{
+        .vertices = tmp_vertices.toOwnedSlice(), // get rid of indexing for now for simplicity
+        .indices = tmp_vertex_indices.toOwnedSlice()
+    };
 }
+
+// fn load_file(file_path: []const u8) !SplitIterator {
+//     const file = try std.fs.cwd().openFile(file_path, .{});
+//     defer file.close();
+
+//     const reader = file.reader();
+//     const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
+//     defer allocator.free(text);
+//     const lines_split = std.mem.split(text, "\n");
+
+//     return lines_split;
+// }

@@ -12,6 +12,7 @@ const cos = stdMath.cos;
 const sin = stdMath.sin;
 const PngImage = @import("png.zig").PngImage;
 const obj_loader = @import("obj.zig");
+const Mesh = obj_loader.Mesh;
 
 // TODO: handle window resizing
 const width: i32 = 1024;
@@ -114,8 +115,12 @@ fn init() bool {
 }
 
 pub fn main() !void {
-    const verts: []f32 = try obj_loader.load_obj("assets/backpack/backpack.obj");
-    std.debug.print("{any}\n", .{ verts[500] });
+    const mesh = try obj_loader.load_obj("assets/teddy.obj");
+    // std.debug.print("{any}\n", .{mesh});
+    const num_vertices = @intCast(c_int, mesh.vertices.len);
+    const num_indices = @intCast(c_int, mesh.indices.len);
+    std.debug.print("vertices: {d}\n", .{num_vertices});
+    std.debug.print("indices: {d}\n", .{num_indices});
 
     // create an allocator to use
     const alloc = std.heap.page_allocator;
@@ -173,6 +178,7 @@ pub fn main() !void {
 
     // ---- setup vertex data and attributes
     var VBO: u32 = undefined; // vertex buffer object - send vertex data to vram
+    var VBO2: u32 = undefined;
     var objectVAO: u32 = undefined; // vertex array object - save vertex attribute configurations 
     var lightVAO: u32 = undefined;
 
@@ -194,11 +200,19 @@ pub fn main() !void {
     c.glEnableVertexAttribArray(2);
 
     // ---- Light VAO
+    var EBO: u32 = undefined;
+    c.glGenBuffers(1, &EBO);
+    c.glGenBuffers(1, &VBO2);
     c.glGenVertexArrays(1, &lightVAO);
     c.glBindVertexArray(lightVAO);
-    c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
-    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), null);
+    c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO2);
+    c.glBufferData(c.GL_ARRAY_BUFFER, num_vertices * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &mesh.vertices[0]), c.GL_STATIC_DRAW);
+    c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
+    c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
+    c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, mesh.indices.len * @sizeOf(c.GLuint)), mesh.indices.ptr, c.GL_STATIC_DRAW);
+    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 3 * @sizeOf(c.GLfloat), null);
     c.glEnableVertexAttribArray(0);
+
 
     var nbFrames: i32 = 0;
     var last_time: f32 = 0.0;
@@ -218,7 +232,7 @@ pub fn main() !void {
         // TODO: refactor variable names
         nbFrames += 1;
         if ( currentFrame - last_time >= 1.0 ){
-            std.debug.print("{d} ms/frame \n", .{ 1000.0 / @intToFloat(f32, nbFrames)});
+            // std.debug.print("{d} ms/frame \n", .{ 1000.0 / @intToFloat(f32, nbFrames)});
             nbFrames = 0;
             last_time += 1.0;
         }
@@ -317,12 +331,23 @@ pub fn main() !void {
         }
 
         // -- lights 
+        
         c.glUseProgram(light_shader.program_id);
+        // uniforms
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "projection"), 1, c.GL_FALSE, projection.get_data());
         c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "view"), 1, c.GL_FALSE, view.get_data());
-        // c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
-        // c.glBufferData(c.GL_ARRAY_BUFFER, verts.len * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &verts[0]), c.GL_STATIC_DRAW);
-        // c.glBindVertexArray(lightVAO);
+        model = mat4.identity();
+        model = model.scale(vec3.new(0.02, 0.02, 0.02));
+        model = model.translate(vec3.new(0.0, 0.0, -2.0));
+        modelLoc = c.glGetUniformLocation(light_shader.program_id, "model");
+        c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
+        // send my data
+        
+        // draw
+        c.glBindVertexArray(lightVAO);
+        c.glDrawElements(c.GL_TRIANGLES, num_indices, c.GL_UNSIGNED_INT, null);
+
+
         // c.glDrawArrays(c.GL_TRIANGLES, 0, verts.len / 8);
         // i = 0;
         // while (i < 4) { // 4 lamps
