@@ -7,6 +7,7 @@ const za = @import("zalgebra");
 const mat4 = za.mat4;
 const vec3 = za.vec3;
 const PngImage = @import("png.zig").PngImage;
+const cube_vertices = @import("cube.zig").vertices;
 
 pub const Camera = struct {
     pos: vec3,
@@ -83,18 +84,20 @@ pub const Texture = struct {
 pub const Mesh = struct {
     vbo: u32,
     vao: u32 = 0,
-    ebo: u32,
+    ebo: ?u32,
 
     vertices: usize,
     indices: usize,
 
-    pub fn create(vertices: []f32, indices: []u32) Mesh {
+    // TODO: make indices option. if passed in make an ebo, otherwise just load vertices in (e.g. cube.zig)
+    pub fn create(vertices: []f32, indices: ?[]u32) Mesh {
         // generate VBO
         var VBO: u32 = undefined;
         c.glGenBuffers(1, &VBO);
         // upload vertex data
         c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
         c.glBufferData(c.GL_ARRAY_BUFFER, @intCast(c_long, vertices.len * @sizeOf(c.GLfloat)), vertices.ptr, c.GL_STATIC_DRAW);
+        std.debug.print("vertices = {any}\n", .{vertices.len / 8}); // 8 floats per geometry vertex
 
         // generate VAO - vertex attribute object
         var VAO: u32 = undefined;
@@ -111,24 +114,35 @@ pub const Mesh = struct {
 
         // generate EBO
         var EBO: u32 = undefined;
-        c.glGenBuffers(1, &EBO);
-        // upload index data
-        c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
-        c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, indices.len * @sizeOf(c.GLuint)), indices.ptr, c.GL_STATIC_DRAW);
+        if (indices) |_indices| { // only do this if we provided indices to the constructor
+            c.glGenBuffers(1, &EBO);
+            // upload index data
+            c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
+            c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, _indices.len * @sizeOf(c.GLuint)), _indices.ptr, c.GL_STATIC_DRAW);
+            std.debug.print("triangles = {any}\n", .{_indices.len / 3}); // 3 indices per triangle
+        }
 
-        std.debug.print("vertices = {any}\n", .{vertices.len / 8}); // 8 floats per geometry vertex
-        std.debug.print("triangles = {any}\n", .{indices.len / 3}); // 3 indices per triangle
-
-        // log out some info
         std.debug.print("Mesh created.\n", .{});
 
         return Mesh{
             .vbo = VBO,
             .vao = VAO,
-            .ebo = EBO,
+            .ebo = if (indices != null) EBO else null,
             .vertices = vertices.len,
-            .indices = indices.len
+            .indices = if (indices != null) indices.?.len else 0
         };
+    }
+};
+
+pub const Model = struct {
+    meshes: []Mesh,
+    // textures: []Texture
+    use_gamma_correction: bool,
+
+    pub fn from_obj(file_path: []const u8) !Model {
+        // load meshes
+
+
     }
 };
 
@@ -202,3 +216,42 @@ fn initGLShader(source: []const u8, kind: c.GLenum) !c.GLuint {
     }
     return shader_id;
 }
+
+pub const Cube = struct {
+    mesh: Mesh,
+    shader_id: c.GLuint,
+    translation: vec3,
+    rotation: vec3,
+    scale: vec3,
+
+    pub fn create(shader_id: c.GLuint) !Cube {
+        // load cube verts
+        const verts = try c_allocator.alloc(f32, cube_vertices.len);
+        defer c_allocator.free(verts);
+        std.mem.copy(f32, verts, cube_vertices[0..]);
+        const mesh = Mesh.create(verts, null);
+
+        return Cube{
+            .mesh = mesh,
+            .shader_id = shader_id,
+            .translation = vec3.one(),
+            .rotation = vec3.one(),
+            .scale = vec3.one()
+        };
+    }
+
+    pub fn draw(cube: Cube) void {
+        // bind shaders
+        // c.glUseProgram(cube.shader_id);
+
+        // upload uniforms
+        // including mvp
+
+        // bind vao
+        c.glBindVertexArray(cube.mesh.vao);
+        // draw call
+        c.glDrawArrays(c.GL_TRIANGLES, 0, 36); // cubes have 36 vertices
+    }
+
+    // TODO: pub fn destroy() void {}
+};

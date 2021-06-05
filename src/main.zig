@@ -13,6 +13,7 @@ const sin = stdMath.sin;
 const PngImage = @import("png.zig").PngImage;
 const obj_loader = @import("obj.zig");
 const Mesh = r.Mesh;
+const Cube = r.Cube;
 
 // TODO: handle window resizing
 const width: i32 = 1024;
@@ -51,37 +52,8 @@ var camera = r.Camera.create(
 var delta_time: f64 = 0.0;
 var last_frame: f64 = 0.0;
 
-fn error_callback(err: c_int, description: [*c]const u8) callconv(.C) void {
-    panic("Error: {s}\n", .{description});
-}
-fn key_callback(win: ?*c.GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int) callconv(.C) void {
-    if (action == c.GLFW_PRESS) {
-        switch (key) {
-            c.GLFW_KEY_ESCAPE => c.glfwSetWindowShouldClose(win, c.GL_TRUE),
-            else => {}
-        }
-    }
-    return;
-}
-
-fn mouse_callback(win: ?*c.GLFWwindow, x_pos: f64, y_pos: f64) callconv(.C) void {
-    var x_offset = x_pos - last_x;
-    var y_offset = last_y - y_pos;
-    last_x = x_pos;
-    last_y = y_pos;
-
-    const sensitivity = 0.1;
-    x_offset = x_offset * sensitivity;
-    y_offset = y_offset * sensitivity;
-
-    yaw += @floatCast(f32, x_offset);
-    pitch += @floatCast(f32, y_offset);
-
-    if (pitch > 89.0)
-        pitch =  89.0;
-    if (pitch < -89.0)
-        pitch = -89.0;
-}
+// TODO: set up logging and log levels
+// refer to this https://github.com/ziglang/zig/blob/master/lib/std/log.zig
 
 fn init() bool {
     _ = c.glfwSetErrorCallback(error_callback);
@@ -117,7 +89,6 @@ fn init() bool {
 }
 
 pub fn main() !void {
-
     // create an allocator to use
     const alloc = std.heap.page_allocator;
     const memory = try alloc.alloc(u8, 100);
@@ -134,7 +105,6 @@ pub fn main() !void {
     // std.debug.print("indices: {d}\n", .{mesh.indices});
     // std.debug.print("triangles: {d}\n", .{mesh.indices / 3});
 
-
     // ---- shaders    
     const obj_shader = try r.ShaderProgram.create_from_file("shaders/lit_object.vert", "shaders/lit_object.frag");
     const light_shader = try r.ShaderProgram.create_from_file("shaders/lamp.vert", "shaders/lamp.frag");
@@ -147,11 +117,12 @@ pub fn main() !void {
     // ---- setup vertex data and attributes
     var VBO: u32 = undefined; // vertex buffer object - send vertex data to vram
     var VBO2: u32 = undefined;
-    var objectVAO: u32 = undefined; // vertex array object - save vertex attribute configurations 
+    var objectVAO: u32 = undefined;
     var lightVAO: u32 = undefined;
 
-    // TODO: move to one time setup to a separate function
+    const cube1 = try Cube.create(obj_shader.program_id);
 
+    // TODO: move to one time setup to a separate function
     c.glGenVertexArrays(1, &objectVAO);
     c.glGenBuffers(1, &VBO);
     // ---- Object VAO
@@ -166,21 +137,6 @@ pub fn main() !void {
     const tex_offset = @intToPtr(*const c_void, 6 * @sizeOf(c.GLfloat));
     c.glVertexAttribPointer(2, 2, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), tex_offset); // texture coord
     c.glEnableVertexAttribArray(2);
-
-    // ---- Light VAO
-    // var EBO: u32 = undefined;
-    // c.glGenBuffers(1, &EBO);
-    // c.glGenBuffers(1, &VBO2);
-    // c.glGenVertexArrays(1, &lightVAO);
-    // c.glBindVertexArray(lightVAO);
-    // c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO2);
-    // c.glBufferData(c.GL_ARRAY_BUFFER, num_vertices * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &mesh.vertices[0]), c.GL_STATIC_DRAW);
-    // c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
-    // c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
-    // c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, mesh.indices.len * @sizeOf(c.GLuint)), mesh.indices.ptr, c.GL_STATIC_DRAW);
-    // c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 3 * @sizeOf(c.GLfloat), null);
-    // c.glEnableVertexAttribArray(0);
-
 
     var nbFrames: i32 = 0;
     var last_time: f32 = 0.0;
@@ -296,7 +252,7 @@ pub fn main() !void {
             // TODO: rotations
             modelLoc = c.glGetUniformLocation(obj_shader.program_id, "model");
             c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
-            // c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
+            c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
             i += 1;
         }
 
@@ -316,7 +272,7 @@ pub fn main() !void {
         
         // draw
         c.glBindVertexArray(mesh.vao);
-        c.glDrawElements(c.GL_TRIANGLES, @intCast(c_int, mesh.indices), c.GL_UNSIGNED_INT, null);
+        // c.glDrawElements(c.GL_TRIANGLES, @intCast(c_int, mesh.indices), c.GL_UNSIGNED_INT, null);
         // c.glDrawArrays(c.GL_TRIANGLES, 0, num_vertices);
 
         // c.glDrawArrays(c.GL_TRIANGLES, 0, verts.len / 8);
@@ -331,15 +287,6 @@ pub fn main() !void {
         //     c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
         //     i += 1;
         // }
-
-        // -- backpack
-        // update data
-        // c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
-        // c.glBufferData(c.GL_ARRAY_BUFFER, verts.len * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &verts[0]), c.GL_STATIC_DRAW);
-
-        // c.glUseProgram(light_shader.program_id);
-
-        // c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         c.glfwSwapBuffers(window);
@@ -367,4 +314,37 @@ fn process_input(win: ?*c.GLFWwindow) void {
     if (c.glfwGetKey(win, c.GLFW_KEY_D) == c.GLFW_PRESS) {
         camera.pos = vec3.add(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
     }
+}
+
+// callbacks
+fn error_callback(err: c_int, description: [*c]const u8) callconv(.C) void {
+    panic("Error: {s}\n", .{description});
+}
+fn key_callback(win: ?*c.GLFWwindow, key: c_int, scancode: c_int, action: c_int, mods: c_int) callconv(.C) void {
+    if (action == c.GLFW_PRESS) {
+        switch (key) {
+            c.GLFW_KEY_ESCAPE => c.glfwSetWindowShouldClose(win, c.GL_TRUE),
+            else => {}
+        }
+    }
+    return;
+}
+
+fn mouse_callback(win: ?*c.GLFWwindow, x_pos: f64, y_pos: f64) callconv(.C) void {
+    var x_offset = x_pos - last_x;
+    var y_offset = last_y - y_pos;
+    last_x = x_pos;
+    last_y = y_pos;
+
+    const sensitivity = 0.1;
+    x_offset = x_offset * sensitivity;
+    y_offset = y_offset * sensitivity;
+
+    yaw += @floatCast(f32, x_offset);
+    pitch += @floatCast(f32, y_offset);
+
+    if (pitch > 89.0)
+        pitch =  89.0;
+    if (pitch < -89.0)
+        pitch = -89.0;
 }

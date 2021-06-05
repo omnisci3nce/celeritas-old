@@ -47,6 +47,8 @@ pub fn load_obj(file_path: []const u8) !Mesh {
             try parse_texture_coords(&tmp_texcoords, line);
         } else if (std.mem.eql(u8, line_header, "f")) {
             try parse_face(&tmp_elements, line);
+        } else if (std.mem.eql(u8, line_header, "mtllib")) {
+            std.debug.print("use a material lib!\n", .{});
         } else {} // ignore
         // TODO: handle material
         // TODO: handle multiple meshes to make up one model
@@ -59,13 +61,6 @@ pub fn load_obj(file_path: []const u8) !Mesh {
     // std.debug.print("face elements: {d}\n", .{tmp_elements.items.len});
     // std.debug.print("faces: {d}\n", .{@intToFloat(f32, tmp_elements.items.len) / 3.0});
 
-    // return as a Mesh struct
-    // return Mesh.create(
-    //     tmp_vertices.toOwnedSlice(), // get rid of indexing for now for simplicity
-    //     tmp_vertex_indices.toOwnedSlice()
-    // );
-
-    
     // merge all vertices
     var output_buffer = try allocator.alloc(f32, tmp_vertices.items.len * 8); // 3 pos, 3 norm, 2 tex
     var output_idx_buffer = try allocator.alloc(u32, tmp_elements.items.len); // num triangles
@@ -158,15 +153,3 @@ fn parse_face(elements_array: *std.ArrayList(FaceElement), line: []const u8) !vo
         v_i += 1;
     }
 }
-
-// fn load_file(file_path: []const u8) !SplitIterator {
-//     const file = try std.fs.cwd().openFile(file_path, .{});
-//     defer file.close();
-
-//     const reader = file.reader();
-//     const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
-//     defer allocator.free(text);
-//     const lines_split = std.mem.split(text, "\n");
-
-//     return lines_split;
-// }
