@@ -6,11 +6,19 @@ const vec3 = za.vec3;
 const SplitIterator = std.mem.SplitIterator;
 const Mesh = @import("rendering.zig").Mesh;
 
-pub fn load_obj(file_path: []const u8) !Mesh {
-    var tmp_vertices = std.ArrayList(f32).init(allocator);
-    var tmp_vertex_indices  = std.ArrayList(u32).init(allocator);
-    // defer tmp_vertices.deinit();
-    // defer tmp_vertex_indices.deinit();
+const FaceElement = struct {
+    position_idx: u32,
+    texture_index: u32,
+    normal_index: u32
+};
+
+pub fn load_obj(file_path: []const u8) !void {
+    std.debug.print("Begin load OBJ to Mesh.\n", .{});
+    var tmp_vertices = std.ArrayList(vec3).init(allocator); // positions
+    var tmp_normals = std.ArrayList(vec3).init(allocator);  // normals
+    var tmp_texcoords = std.ArrayList(vec2).init(allocator); // texture coords
+    var tmp_elements  = std.ArrayList(FaceElement).init(allocator);    // face elements
+    // don't need to deinit because I'm using toOwnedSlice later
 
     // load the file
     const file = try std.fs.cwd().openFile(file_path, .{});
@@ -28,47 +36,85 @@ pub fn load_obj(file_path: []const u8) !Mesh {
         const line_header = line_items.next().?;
 
         // if v -> append a vertex (x, y, z)
+        // if vn -> append vertex normals
+        // if vt -> 
         // if f -> append 3 vertex indices
         if (std.mem.eql(u8, line_header, "v")) {
             try parse_vertex(&tmp_vertices, line);
+        } else if (std.mem.eql(u8, line_header, "vn")) {
+            try parse_normal(&tmp_normals, line);
+        } else if (std.mem.eql(u8, line_header, "vt")) {
+            try parse_texture_coords(&tmp_texcoords, line);
         } else if (std.mem.eql(u8, line_header, "f")) {
-            const v1 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
-            const v2 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
-            const v3 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
-            try tmp_vertex_indices.append(v1 - 1); // uses indexing from one so subtract one for array access
-            try tmp_vertex_indices.append(v2 - 1);
-            try tmp_vertex_indices.append(v3 - 1);
+            try parse_face(&tmp_elements, line);
         } else {} // ignore
+        // TODO: handle material
+        // TODO: handle multiple meshes to make up one model
     }
 
+    // debug info
+    std.debug.print("vertices: {d}\n", .{tmp_vertices.items.len});
+    std.debug.print("tex coords: {d}\n", .{tmp_texcoords.items.len});
+    std.debug.print("normals: {d}\n", .{tmp_normals.items.len});
+    std.debug.print("face elements: {d}\n", .{tmp_elements.items.len});
+    std.debug.print("faces: {d}\n", .{@intToFloat(f32, tmp_elements.items.len) / 3.0});
+
     // return as a Mesh struct
-    return Mesh.create(
-        tmp_vertices.toOwnedSlice(), // get rid of indexing for now for simplicity
-        tmp_vertex_indices.toOwnedSlice()
-    );
+    // return Mesh.create(
+    //     tmp_vertices.toOwnedSlice(), // get rid of indexing for now for simplicity
+    //     tmp_vertex_indices.toOwnedSlice()
+    // );
+
+    std.debug.print("Finish load OBJ to Mesh.\n", .{});
 }
 
 // A vertex is specified via a line starting with the letter v. That is followed by (x,y,z[,w]) coordinates. W is optional and defaults to 1.0.
-fn parse_vertex(vertex_array: *std.ArrayList(f32), line: []const u8) !void {
+fn parse_vertex(vertex_array: *std.ArrayList(vec3), line: []const u8) !void {
     var line_items = std.mem.split(line, " ");
     _ = line_items.next(); // skip line header
     const x = try std.fmt.parseFloat(f32, line_items.next().?);
     const y = try std.fmt.parseFloat(f32, line_items.next().?);
     const z = try std.fmt.parseFloat(f32, line_items.next().?);
-    try vertex_array.append(x);
-    try vertex_array.append(y);
-    try vertex_array.append(z);
-    try vertex_array.append(0);
-    try vertex_array.append(0);
-    try vertex_array.append(0);
-    try vertex_array.append(0);
-    try vertex_array.append(0);
+    try vertex_array.append(vec3.new(x, y, z));
 }
 
 // TODO:
-// fn parse_texture_coords() {}
-// fn parse_normals() {}
-// fn parse_face() {}
+
+fn parse_normal(normal_array: *std.ArrayList(vec3), line: []const u8) !void {
+    var line_items = std.mem.split(line, " ");
+    _ = line_items.next(); // skip line header
+    const x = try std.fmt.parseFloat(f32, line_items.next().?);
+    const y = try std.fmt.parseFloat(f32, line_items.next().?);
+    const z = try std.fmt.parseFloat(f32, line_items.next().?);
+    try normal_array.append(vec3.new(x, y, z));
+}
+
+fn parse_texture_coords (tex_coords_array: *std.ArrayList(vec2), line: []const u8) !void {
+    // TODO
+}
+
+fn parse_face(elements_array: *std.ArrayList(FaceElement), line: []const u8) !void {
+    var line_items = std.mem.split(line, " ");
+    _ = line_items.next(); // skip line header
+
+    var v_i: u32 = 0;
+    while (v_i < 3) {
+        var vert = line_items.next().?;
+        var vert_parts = std.mem.split(vert, "/");
+        var v_vertex_idx = vert_parts.next().?;
+        var v_texture_idx = vert_parts.next().?;
+        var v_normal_idx = vert_parts.next().?;
+        // std.debug.print("face: vertex: {s}, tex: {s}, normal: {s}\n", .{v1_vertex_idx, v1_texture_idx, v1_normal_idx});
+
+        try elements_array.append(.{
+            .position_idx  = (std.fmt.parseUnsigned(u32, v_vertex_idx, 10) catch 1) - 1, // indexed from 1 not zero
+            .texture_index = (std.fmt.parseUnsigned(u32, v_texture_idx, 10) catch 1) - 1,
+            .normal_index  = (std.fmt.parseUnsigned(u32, v_normal_idx, 10) catch 1) - 1,
+        });
+
+        v_i += 1;
+    }
+}
 
 // fn load_file(file_path: []const u8) !SplitIterator {
 //     const file = try std.fs.cwd().openFile(file_path, .{});

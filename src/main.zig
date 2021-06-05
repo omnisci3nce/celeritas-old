@@ -126,11 +126,11 @@ pub fn main() !void {
     var initialised = init();
 
     // ---- meshes
-    const mesh = try obj_loader.load_obj("assets/teddy.obj");
+    const mesh = try obj_loader.load_obj("assets/cube.obj");
     // const num_vertices = @intCast(c_int, mesh.vertices.len);
     // const num_indices = @intCast(c_int, mesh.indices.len);
-    std.debug.print("vertices: {d}\n", .{mesh.vertices});
-    std.debug.print("indices: {d}\n", .{mesh.indices});
+    // std.debug.print("vertices: {d}\n", .{mesh.vertices});
+    // std.debug.print("indices: {d}\n", .{mesh.indices});
 
     // ---- shaders    
     const obj_shader = try r.ShaderProgram.create_from_file("shaders/lit_object.vert", "shaders/lit_object.frag");
@@ -308,8 +308,8 @@ pub fn main() !void {
         // send my data
         
         // draw
-        c.glBindVertexArray(mesh.vao);
-        c.glDrawElements(c.GL_TRIANGLES, @intCast(c_int, mesh.indices), c.GL_UNSIGNED_INT, null);
+        // c.glBindVertexArray(mesh.vao);
+        // c.glDrawElements(c.GL_TRIANGLES, @intCast(c_int, mesh.indices), c.GL_UNSIGNED_INT, null);
 
 
         // c.glDrawArrays(c.GL_TRIANGLES, 0, verts.len / 8);
