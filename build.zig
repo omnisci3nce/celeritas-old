@@ -21,7 +21,7 @@ pub fn build(b: *Builder) void {
 
     exe.linkSystemLibrary("c");
     exe.addFrameworkDir("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks");
-            exe.linkFramework("OpenGL");
+    exe.linkFramework("OpenGL");
     exe.linkSystemLibrary("glfw");
     exe.linkSystemLibrary("epoxy");
     exe.linkSystemLibrary("assimp");
