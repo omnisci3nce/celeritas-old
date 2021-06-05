@@ -97,7 +97,7 @@ pub fn main() !void {
     var initialised = init();
 
     // ---- meshes
-    const mesh = try obj_loader.load_obj("assets/backpack/backpack.obj");
+    const mesh = try obj_loader.load_obj("assets/teddy.obj");
     const num_vertices = @intCast(c_int, mesh.vertices);
     const num_indices = @intCast(c_int, mesh.indices);
     // std.debug.print("\nvertex attrs: {d}\n", .{mesh.vertices});
@@ -120,7 +120,11 @@ pub fn main() !void {
     var objectVAO: u32 = undefined;
     var lightVAO: u32 = undefined;
 
-    const cube1 = try Cube.create(obj_shader.program_id);
+    const cube1 = try Cube.create(teddy_shader);
+    // const cube2 = try Cube.create(teddy_shader);
+    // const cube3 = try Cube.create(teddy_shader);
+    // const cube4 = try Cube.create(teddy_shader);
+    // const cube5 = try Cube.create(teddy_shader);
 
     // TODO: move to one time setup to a separate function
     c.glGenVertexArrays(1, &objectVAO);
@@ -138,7 +142,6 @@ pub fn main() !void {
     c.glVertexAttribPointer(2, 2, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), tex_offset); // texture coord
     c.glEnableVertexAttribArray(2);
 
-    var nbFrames: i32 = 0;
     var last_time: f32 = 0.0;
     // ---- Render loop
     while (c.glfwWindowShouldClose(window) == c.GL_FALSE) {
@@ -153,13 +156,6 @@ pub fn main() !void {
         const currentFrame = c.glfwGetTime();
         delta_time = currentFrame - last_frame;
         last_frame = currentFrame;
-        // TODO: refactor variable names
-        nbFrames += 1;
-        if ( currentFrame - last_time >= 1.0 ){
-            // std.debug.print("{d} ms/frame \n", .{ 1000.0 / @intToFloat(f32, nbFrames)});
-            nbFrames = 0;
-            last_time += 1.0;
-        }
 
         // ---- input
         process_input(window);
@@ -169,124 +165,31 @@ pub fn main() !void {
         c.glClear(c.GL_COLOR_BUFFER_BIT);
         c.glClear(c.GL_DEPTH_BUFFER_BIT);
 
-        // -- object
-        c.glUseProgram(obj_shader.program_id);
-        c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "viewPos"), camera.pos.x, camera.pos.y, camera.pos.z);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "material.shininess"), 32.0);
-        
-        // TODO: hide all these uniform sets somewhere
-
-        // directional light
-        obj_shader.setVec3("dirLight.direction", -0.2, -1.0, -0.3);
-        obj_shader.setVec3("dirLight.ambient", 0.05, 0.05, 0.05);
-        obj_shader.setVec3("dirLight.diffuse", 0.4, 0.4, 0.4);
-        obj_shader.setVec3("dirLight.specular", 0.5, 0.5, 0.5);
-        // point light 1
-        obj_shader.setVec3("pointLights[0].position", pointLightPositions[0].x, pointLightPositions[0].y, pointLightPositions[0].z);
-        obj_shader.setVec3("pointLights[0].ambient", 0.05, 0.05, 0.05);
-        obj_shader.setVec3("pointLights[0].diffuse", 0.8, 0.8, 0.8);
-        obj_shader.setVec3("pointLights[0].specular", 1.0, 1.0, 1.0);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[0].constant"), 1.0);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[0].linear"), 0.09);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[0].quadratic"), 0.032);
-        // point light 2
-        obj_shader.setVec3("pointLights[1].position", pointLightPositions[1].x, pointLightPositions[1].y, pointLightPositions[1].z);
-        obj_shader.setVec3("pointLights[1].ambient", 0.05, 0.05, 0.05);
-        obj_shader.setVec3("pointLights[1].diffuse", 0.8, 0.8, 0.8);
-        obj_shader.setVec3("pointLights[1].specular", 1.0, 1.0, 1.0);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[1].constant"), 1.0);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[1].linear"), 0.09);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[1].quadratic"), 0.032);
-        // point light 3
-        obj_shader.setVec3("pointLights[2].position", pointLightPositions[2].x, pointLightPositions[2].y, pointLightPositions[2].z);
-        obj_shader.setVec3("pointLights[2].ambient", 0.05, 0.05, 0.05);
-        obj_shader.setVec3("pointLights[2].diffuse", 0.8, 0.8, 0.8);
-        obj_shader.setVec3("pointLights[2].specular", 1.0, 1.0, 1.0);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[2].constant"), 1.0);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[2].linear"), 0.09);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[2].quadratic"), 0.032);
-        // point light 4
-        obj_shader.setVec3("pointLights[3].position", pointLightPositions[3].x, pointLightPositions[3].y, pointLightPositions[3].z);
-        obj_shader.setVec3("pointLights[3].ambient", 0.05, 0.05, 0.05);
-        obj_shader.setVec3("pointLights[3].diffuse", 0.8, 0.8, 0.8);
-        obj_shader.setVec3("pointLights[3].specular", 1.0, 1.0, 1.0);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[3].constant"), 1.0);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[4].linear"), 0.09);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "pointLights[4].quadratic"), 0.032);
-        // spotlight
-        obj_shader.setVec3("spotLight.position", camera.pos.x,camera.pos.y,camera.pos.z);
-        obj_shader.setVec3("spotLight.direction", camera.front.x, camera.front.y, camera.front.z);
-        obj_shader.setVec3("spotLight.ambient", 0.0, 0.0, 0.0);
-        obj_shader.setVec3("spotLight.diffuse", 1.0, 1.0, 1.0);
-        obj_shader.setVec3("spotLight.specular", 1.0, 1.0, 1.0);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "spotLight.constant"), 1.0);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "spotLight.linear"), 0.09);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "spotLight.quadratic"), 0.032);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "spotLight.cutOff"), 12.0);
-        c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "spotLight.outerCutOff"), 15.0);
+        c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
 
         // view/projection transformations
-        const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
         const projection = mat4.perspective(45.0, (@intToFloat(f32,width) / @intToFloat(f32, height)), 0.1, 100.0);
-        const viewLoc = c.glGetUniformLocation(obj_shader.program_id, "view");
-        c.glUniformMatrix4fv(viewLoc, 1, c.GL_FALSE, view.get_data());
-        const projectionLoc = c.glGetUniformLocation(obj_shader.program_id, "projection");
-        c.glUniformMatrix4fv(projectionLoc, 1, c.GL_FALSE, projection.get_data());
-        // world transformation
-        var model = mat4.identity();
-        var modelLoc = c.glGetUniformLocation(obj_shader.program_id, "model");
-        c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
-        // diffuse map
-        c.glActiveTexture(c.GL_TEXTURE0);
-        c.glBindTexture(c.GL_TEXTURE_2D, diffuse.texture_id);
-        // specular map
-        c.glActiveTexture(c.GL_TEXTURE1);
-        c.glBindTexture(c.GL_TEXTURE_2D, specular.texture_id); 
-        // render objects
-        c.glBindVertexArray(objectVAO);
-        // TODO: for loop
-        var i: u8 = 0;
-        while (i < 10) {
-            model = mat4.identity();
-            model = model.translate(cube_positions[i]);
-            // TODO: rotations
-            modelLoc = c.glGetUniformLocation(obj_shader.program_id, "model");
-            c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
-            c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
-            i += 1;
-        }
+        const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
 
-        // -- lights 
-        
+        // render a cube
         c.glUseProgram(teddy_shader.program_id);
-        // uniforms
-        c.glUniformMatrix4fv(c.glGetUniformLocation(teddy_shader.program_id, "projection"), 1, c.GL_FALSE, projection.get_data());
-        c.glUniformMatrix4fv(c.glGetUniformLocation(teddy_shader.program_id, "view"), 1, c.GL_FALSE, view.get_data());
-        model = mat4.identity();
-        // model = model.scale(vec3.new(0.05, 0.05, 0.05)); // scale teddy!
-        // model = model.scale(vec3.new(0.5, 0.5, 0.5));
-        model = model.translate(vec3.new(-0.5, 0.0, -4.0));
-        modelLoc = c.glGetUniformLocation(teddy_shader.program_id, "model");
-        c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
-        // send my data
-        
-        // draw
-        c.glBindVertexArray(mesh.vao);
-        // c.glDrawElements(c.GL_TRIANGLES, @intCast(c_int, mesh.indices), c.GL_UNSIGNED_INT, null);
-        // c.glDrawArrays(c.GL_TRIANGLES, 0, num_vertices);
+        var model = mat4.identity();
+        model = model.scale(cube1.scale); 
+        model = model.translate(cube1.translation);
+        teddy_shader.setMat4("model", model);
+        teddy_shader.setMat4("view", view);
+        teddy_shader.setMat4("projection", projection);
+        cube1.draw();
 
-        // c.glDrawArrays(c.GL_TRIANGLES, 0, verts.len / 8);
-        // i = 0;
-        // while (i < 4) { // 4 lamps
-        //     model = mat4.identity();
-        //     model = model.scale(vec3.new(0.2, 0.2, 0.2));
-        //     model = model.translate(pointLightPositions[i]);
-        //     modelLoc = c.glGetUniformLocation(light_shader.program_id, "model");
-        //     c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
-        //     // draw lamp
-        //     c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
-        //     i += 1;
-        // }
+        // render a teddy
+        c.glUseProgram(teddy_shader.program_id);
+        model = mat4.identity();
+        model = model.scale(vec3.new(0.05, 0.05, 0.05));
+        model = model.translate(vec3.new(1.0, 1.0, 4.0));
+        teddy_shader.setMat4("model", model);
+        teddy_shader.setMat4("view", view);
+        teddy_shader.setMat4("projection", projection);
+        mesh.draw();
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         c.glfwSwapBuffers(window);

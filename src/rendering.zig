@@ -132,6 +132,15 @@ pub const Mesh = struct {
             .indices = if (indices != null) indices.?.len else 0
         };
     }
+
+    pub fn draw(mesh: Mesh) void {
+        c.glBindVertexArray(mesh.vao);
+        if (mesh.ebo != null) {
+            c.glDrawElements(c.GL_TRIANGLES, @intCast(c_int, mesh.indices), c.GL_UNSIGNED_INT, null);
+        } else {
+            c.glDrawArrays(c.GL_TRIANGLES, 0, @intCast(c_int, mesh.vertices / 8));
+        }
+    }
 };
 
 pub const Model = struct {
@@ -164,10 +173,6 @@ pub const ShaderProgram = struct {
         c.glLinkProgram(sp.program_id);
         return sp;
     }
-    pub fn setVec3(sp: ShaderProgram, name: []const u8, x: f32, y: f32, z: f32) void {
-        const location = c.glGetUniformLocation(sp.program_id, name.ptr);
-        c.glUniform3f(location, x, y, z);
-    }
 
     pub fn create_from_file(vertex_path: []const u8, fragment_path: []const u8) !ShaderProgram {
         var vertex_file = try std.fs.cwd().openFile(vertex_path, .{});
@@ -189,6 +194,21 @@ pub const ShaderProgram = struct {
         defer c_allocator.free(fragment_source);
 
         return ShaderProgram.create(vertex_source, fragment_source);
+    }
+
+    pub fn setVec3(sp: ShaderProgram, name: []const u8, x: f32, y: f32, z: f32) void {
+        const location = c.glGetUniformLocation(sp.program_id, name.ptr);
+        c.glUniform3f(location, x, y, z);
+    }
+
+    pub fn setFloat(sp: ShaderProgram, name: []const u8, value: f32) void {
+        const location = c.glGetUniformLocation(sp.program_id, name.ptr);
+        c.glUniform1f(location, value);
+    }
+
+    pub fn setMat4(sp: ShaderProgram, name: []const u8, value: mat4) void {
+        const location = c.glGetUniformLocation(sp.program_id, name.ptr);
+        c.glUniformMatrix4fv(location, 1, c.GL_FALSE, value.get_data());
     }
 
     // pub fn destroy() {}
@@ -219,12 +239,12 @@ fn initGLShader(source: []const u8, kind: c.GLenum) !c.GLuint {
 
 pub const Cube = struct {
     mesh: Mesh,
-    shader_id: c.GLuint,
+    shader: ShaderProgram,
     translation: vec3,
     rotation: vec3,
     scale: vec3,
 
-    pub fn create(shader_id: c.GLuint) !Cube {
+    pub fn create(shader: ShaderProgram) !Cube {
         // load cube verts
         const verts = try c_allocator.alloc(f32, cube_vertices.len);
         defer c_allocator.free(verts);
@@ -233,7 +253,7 @@ pub const Cube = struct {
 
         return Cube{
             .mesh = mesh,
-            .shader_id = shader_id,
+            .shader = shader,
             .translation = vec3.one(),
             .rotation = vec3.one(),
             .scale = vec3.one()
@@ -242,7 +262,7 @@ pub const Cube = struct {
 
     pub fn draw(cube: Cube) void {
         // bind shaders
-        // c.glUseProgram(cube.shader_id);
+        c.glUseProgram(cube.shader.program_id);
 
         // upload uniforms
         // including mvp

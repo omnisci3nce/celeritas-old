@@ -5,6 +5,7 @@ const vec2 = za.vec2;
 const vec3 = za.vec3;
 const SplitIterator = std.mem.SplitIterator;
 const Mesh = @import("rendering.zig").Mesh;
+const Model = @import("rendering.zig").Model;
 
 const FaceElement = struct {
     position_idx: u32,
