@@ -261,15 +261,7 @@ pub const Cube = struct {
     }
 
     pub fn draw(cube: Cube) void {
-        // bind shaders
-        c.glUseProgram(cube.shader.program_id);
-
-        // upload uniforms
-        // including mvp
-
-        // bind vao
         c.glBindVertexArray(cube.mesh.vao);
-        // draw call
         c.glDrawArrays(c.GL_TRIANGLES, 0, 36); // cubes have 36 vertices
     }
 
