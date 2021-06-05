@@ -31,41 +31,29 @@ pub fn load_obj(file_path: []const u8) !Mesh {
         // read first character
         var line_items = std.mem.split(line, " ");
         const line_header = line_items.next().?;
-        // std.debug.print("{any}\n", .{line_items});
-        if (std.mem.eql(u8, line_header, "v")) {
-            const x = try std.fmt.parseFloat(f32, line_items.next().?);
-            const y = try std.fmt.parseFloat(f32, line_items.next().?);
-            const z = try std.fmt.parseFloat(f32, line_items.next().?);
-            // std.debug.print("{any}/{any}/{any}\n", .{x, y, z});
-            try tmp_vertices.append(x);
-            try tmp_vertices.append(y);
-            try tmp_vertices.append(z);
-        } else if (std.mem.eql(u8, line_header, "f")) {
-            const v1 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
-            const v2 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
-            const v3 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
-            // std.debug.print("{any}/{any}/{any}\n", .{v1, v2, v3});
-            try tmp_vertex_indices.append(v1 - 1);
-            try tmp_vertex_indices.append(v2 - 1);
-            try tmp_vertex_indices.append(v3 - 1);
-        }
+
         // if v -> append a vertex (x, y, z)
         // if f -> append 3 vertex indices
-        // switch(line_header) {
-        //     'v' => {        // vertex
+        switch(line_header[0]) {
+            'v' => {        // vertex
                 // std.debug.print("vertex!\n", .{});
-                
-            // },
-            // 'f' => {        // face
-                // const v1 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
-                // const v2 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
-                // const v3 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
-                // try tmp_vertex_indices.append(v1);
-                // try tmp_vertex_indices.append(v2);
-                // try tmp_vertex_indices.append(v3);
-        //     },
-        //     else => {},     // ignore
-        // }
+                const x = try std.fmt.parseFloat(f32, line_items.next().?);
+                const y = try std.fmt.parseFloat(f32, line_items.next().?);
+                const z = try std.fmt.parseFloat(f32, line_items.next().?);
+                try tmp_vertices.append(x);
+                try tmp_vertices.append(y);
+                try tmp_vertices.append(z);
+            },
+            'f' => {        // face
+                const v1 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
+                const v2 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
+                const v3 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
+                try tmp_vertex_indices.append(v1 - 1); // uses indexing from one so subtract one for array access
+                try tmp_vertex_indices.append(v2 - 1);
+                try tmp_vertex_indices.append(v3 - 1);
+            },
+            else => {},     // ignore
+        }
     }
 
     // return as a Mesh struct

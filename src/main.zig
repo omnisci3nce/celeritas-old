@@ -111,12 +111,13 @@ fn init() bool {
     c.glfwMakeContextCurrent(window);
     c.glfwSwapInterval(1);
 
+    c.glEnable(c.GL_DEPTH_TEST);  
+
     return true;
 }
 
 pub fn main() !void {
     const mesh = try obj_loader.load_obj("assets/teddy.obj");
-    // std.debug.print("{any}\n", .{mesh});
     const num_vertices = @intCast(c_int, mesh.vertices.len);
     const num_indices = @intCast(c_int, mesh.indices.len);
     std.debug.print("vertices: {d}\n", .{num_vertices});
@@ -128,49 +129,10 @@ pub fn main() !void {
     defer alloc.free(memory);
 
     var initialised = init();
-    c.glEnable(c.GL_DEPTH_TEST);  
-
-    // TODO: move shaders to their own folder
-    var vertex_file = try std.fs.cwd().openFile("shaders/lit_object.vert", .{});
-    defer vertex_file.close();
-    
-    const vertex_source = try vertex_file.reader().readAllAlloc(
-        alloc,
-        10000,
-    );
-    defer alloc.free(vertex_source);
-
-    var obj_fragment_file = try std.fs.cwd().openFile("shaders/lit_object.frag", .{});
-    defer obj_fragment_file.close();
-    
-    const obj_fragment_source = try obj_fragment_file.reader().readAllAlloc(
-        alloc,
-        10000,
-    );
-    defer alloc.free(obj_fragment_source);
-
-    var light_vertex_file = try std.fs.cwd().openFile("shaders/lamp.vert", .{});
-    defer light_vertex_file.close();
-    
-    const light_vertex_source = try light_vertex_file.reader().readAllAlloc(
-        alloc,
-        10000,
-    );
-    defer alloc.free(light_vertex_source);
-
-    var light_fragment_file = try std.fs.cwd().openFile("shaders/lamp.frag", .{});
-    defer light_fragment_file.close();
-    
-    const light_fragment_source = try light_fragment_file.reader().readAllAlloc(
-        alloc,
-        10000,
-    );
-    defer alloc.free(light_fragment_source);
-
 
     // ---- shaders    
-    const obj_shader = try r.ShaderProgram.create(vertex_source, obj_fragment_source);
-    const light_shader = try r.ShaderProgram.create(light_vertex_source, light_fragment_source);
+    const obj_shader = try r.ShaderProgram.create_from_file("shaders/lit_object.vert", "shaders/lit_object.frag");
+    const light_shader = try r.ShaderProgram.create_from_file("shaders/lamp.vert", "shaders/lamp.frag");
     
     // ---- textures
     const diffuse = try r.Texture.create("assets/container2.png");
@@ -207,7 +169,7 @@ pub fn main() !void {
     c.glBindVertexArray(lightVAO);
     c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO2);
     c.glBufferData(c.GL_ARRAY_BUFFER, num_vertices * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &mesh.vertices[0]), c.GL_STATIC_DRAW);
-    c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
+    // c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
     c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
     c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, mesh.indices.len * @sizeOf(c.GLuint)), mesh.indices.ptr, c.GL_STATIC_DRAW);
     c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 3 * @sizeOf(c.GLfloat), null);

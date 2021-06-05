@@ -2,6 +2,7 @@ const std = @import("std");
 const panic = std.debug.panic;
 const c = @import("c.zig");
 const c_allocator = @import("std").heap.c_allocator;
+// TODO: take allocators as arguments
 const za = @import("zalgebra");
 const mat4 = za.mat4;
 const vec3 = za.vec3;
@@ -100,6 +101,29 @@ pub const ShaderProgram = struct {
         const location = c.glGetUniformLocation(sp.program_id, name.ptr);
         c.glUniform3f(location, x, y, z);
     }
+
+    pub fn create_from_file(vertex_path: []const u8, fragment_path: []const u8) !ShaderProgram {
+        var vertex_file = try std.fs.cwd().openFile(vertex_path, .{});
+        defer vertex_file.close();
+        
+        const vertex_source = try vertex_file.reader().readAllAlloc(
+            c_allocator,
+            10000,
+        );
+        defer c_allocator.free(vertex_source);
+
+        var fragment_file = try std.fs.cwd().openFile(fragment_path, .{});
+        defer fragment_file.close();
+        
+        const fragment_source = try fragment_file.reader().readAllAlloc(
+            c_allocator,
+            10000,
+        );
+        defer c_allocator.free(fragment_source);
+
+        return ShaderProgram.create(vertex_source, fragment_source);
+    }
+    
     // pub fn destroy() {}
 };
 
