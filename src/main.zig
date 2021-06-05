@@ -126,15 +126,19 @@ pub fn main() !void {
     var initialised = init();
 
     // ---- meshes
-    const mesh = try obj_loader.load_obj("assets/cube.obj");
-    // const num_vertices = @intCast(c_int, mesh.vertices.len);
-    // const num_indices = @intCast(c_int, mesh.indices.len);
-    // std.debug.print("vertices: {d}\n", .{mesh.vertices});
+    const mesh = try obj_loader.load_obj("assets/backpack/backpack.obj");
+    const num_vertices = @intCast(c_int, mesh.vertices);
+    const num_indices = @intCast(c_int, mesh.indices);
+    // std.debug.print("\nvertex attrs: {d}\n", .{mesh.vertices});
+    // std.debug.print("vertices: {d}\n", .{mesh.vertices / 8});
     // std.debug.print("indices: {d}\n", .{mesh.indices});
+    // std.debug.print("triangles: {d}\n", .{mesh.indices / 3});
+
 
     // ---- shaders    
     const obj_shader = try r.ShaderProgram.create_from_file("shaders/lit_object.vert", "shaders/lit_object.frag");
     const light_shader = try r.ShaderProgram.create_from_file("shaders/lamp.vert", "shaders/lamp.frag");
+    const teddy_shader = try r.ShaderProgram.create_from_file("shaders/teddy.vert", "shaders/teddy.frag");
     
     // ---- textures
     const diffuse = try r.Texture.create("assets/container2.png");
@@ -171,7 +175,7 @@ pub fn main() !void {
     // c.glBindVertexArray(lightVAO);
     // c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO2);
     // c.glBufferData(c.GL_ARRAY_BUFFER, num_vertices * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &mesh.vertices[0]), c.GL_STATIC_DRAW);
-    c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
+    // c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
     // c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
     // c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, mesh.indices.len * @sizeOf(c.GLuint)), mesh.indices.ptr, c.GL_STATIC_DRAW);
     // c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 3 * @sizeOf(c.GLfloat), null);
@@ -214,6 +218,8 @@ pub fn main() !void {
         c.glUniform3f(c.glGetUniformLocation(obj_shader.program_id, "viewPos"), camera.pos.x, camera.pos.y, camera.pos.z);
         c.glUniform1f(c.glGetUniformLocation(obj_shader.program_id, "material.shininess"), 32.0);
         
+        // TODO: hide all these uniform sets somewhere
+
         // directional light
         obj_shader.setVec3("dirLight.direction", -0.2, -1.0, -0.3);
         obj_shader.setVec3("dirLight.ambient", 0.05, 0.05, 0.05);
@@ -290,27 +296,28 @@ pub fn main() !void {
             // TODO: rotations
             modelLoc = c.glGetUniformLocation(obj_shader.program_id, "model");
             c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
-            c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
+            // c.glDrawArrays(c.GL_TRIANGLES, 0, 36);
             i += 1;
         }
 
         // -- lights 
         
-        c.glUseProgram(light_shader.program_id);
+        c.glUseProgram(teddy_shader.program_id);
         // uniforms
-        c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "projection"), 1, c.GL_FALSE, projection.get_data());
-        c.glUniformMatrix4fv(c.glGetUniformLocation(light_shader.program_id, "view"), 1, c.GL_FALSE, view.get_data());
+        c.glUniformMatrix4fv(c.glGetUniformLocation(teddy_shader.program_id, "projection"), 1, c.GL_FALSE, projection.get_data());
+        c.glUniformMatrix4fv(c.glGetUniformLocation(teddy_shader.program_id, "view"), 1, c.GL_FALSE, view.get_data());
         model = mat4.identity();
-        model = model.scale(vec3.new(0.02, 0.02, 0.02));
-        model = model.translate(vec3.new(0.0, 0.0, -2.0));
-        modelLoc = c.glGetUniformLocation(light_shader.program_id, "model");
+        // model = model.scale(vec3.new(0.05, 0.05, 0.05)); // scale teddy!
+        // model = model.scale(vec3.new(0.5, 0.5, 0.5));
+        model = model.translate(vec3.new(-0.5, 0.0, -4.0));
+        modelLoc = c.glGetUniformLocation(teddy_shader.program_id, "model");
         c.glUniformMatrix4fv(modelLoc, 1, c.GL_FALSE, model.get_data());
         // send my data
         
         // draw
-        // c.glBindVertexArray(mesh.vao);
-        // c.glDrawElements(c.GL_TRIANGLES, @intCast(c_int, mesh.indices), c.GL_UNSIGNED_INT, null);
-
+        c.glBindVertexArray(mesh.vao);
+        c.glDrawElements(c.GL_TRIANGLES, @intCast(c_int, mesh.indices), c.GL_UNSIGNED_INT, null);
+        // c.glDrawArrays(c.GL_TRIANGLES, 0, num_vertices);
 
         // c.glDrawArrays(c.GL_TRIANGLES, 0, verts.len / 8);
         // i = 0;

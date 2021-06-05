@@ -1,1 +1,1 @@
-// string
+// Strings

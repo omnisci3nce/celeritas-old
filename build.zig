@@ -16,7 +16,7 @@ pub fn build(b: *Builder) void {
     exe.addPackagePath("zalgebra", "deps/zalgebra/src/main.zig");
     exe.addIncludeDir("deps/zalgebra");
 
-    exe.addCSourceFile("src/model_loader_impl.c", &[_][]const u8{"-std=c99"});
+    exe.addCSourceFile("src/unused/model_loader_impl.c", &[_][]const u8{"-std=c99"});
     exe.addIncludeDir("src");
 
     exe.linkSystemLibrary("c");

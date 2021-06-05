@@ -102,7 +102,7 @@ pub const Mesh = struct {
         // setup attribute pointers
         const stride = 8 * @sizeOf(c.GLfloat);
         c.glBindVertexArray(VAO);
-        c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, stride, null);                // position
+        c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, stride, null);                                                // position
         c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, stride, @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat)));    // normal
         c.glVertexAttribPointer(2, 2, c.GL_FLOAT, c.GL_FALSE, stride, @intToPtr(*const c_void, 6 * @sizeOf(c.GLfloat)));    // tex coords
         c.glEnableVertexAttribArray(0);
@@ -115,6 +115,9 @@ pub const Mesh = struct {
         // upload index data
         c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
         c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, indices.len * @sizeOf(c.GLuint)), indices.ptr, c.GL_STATIC_DRAW);
+
+        std.debug.print("vertices = {any}\n", .{vertices.len / 8}); // 8 floats per geometry vertex
+        std.debug.print("triangles = {any}\n", .{indices.len / 3}); // 3 indices per triangle
 
         // log out some info
         std.debug.print("Mesh created.\n", .{});
@@ -134,6 +137,7 @@ pub const ShaderProgram = struct {
     vertex_id: c.GLuint,
     fragment_id: c.GLuint,
 
+    // TODO: accept an allocator
     // take strings of shaders
     pub fn create(vertex_source: []const u8, fragment_source: []const u8) !ShaderProgram {
         var sp: ShaderProgram = undefined;

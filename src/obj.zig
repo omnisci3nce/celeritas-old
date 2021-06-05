@@ -8,16 +8,16 @@ const Mesh = @import("rendering.zig").Mesh;
 
 const FaceElement = struct {
     position_idx: u32,
-    texture_index: u32,
-    normal_index: u32
+    texture_idx: u32,
+    normal_idx: u32
 };
 
-pub fn load_obj(file_path: []const u8) !void {
+pub fn load_obj(file_path: []const u8) !Mesh {
     std.debug.print("Begin load OBJ to Mesh.\n", .{});
-    var tmp_vertices = std.ArrayList(vec3).init(allocator); // positions
-    var tmp_normals = std.ArrayList(vec3).init(allocator);  // normals
-    var tmp_texcoords = std.ArrayList(vec2).init(allocator); // texture coords
-    var tmp_elements  = std.ArrayList(FaceElement).init(allocator);    // face elements
+    var tmp_vertices = std.ArrayList(vec3).init(allocator);             // positions
+    var tmp_normals = std.ArrayList(vec3).init(allocator);              // normals
+    var tmp_texcoords = std.ArrayList(vec2).init(allocator);            // texture coords
+    var tmp_elements  = std.ArrayList(FaceElement).init(allocator);     // face elements
     // don't need to deinit because I'm using toOwnedSlice later
 
     // load the file
@@ -53,11 +53,11 @@ pub fn load_obj(file_path: []const u8) !void {
     }
 
     // debug info
-    std.debug.print("vertices: {d}\n", .{tmp_vertices.items.len});
-    std.debug.print("tex coords: {d}\n", .{tmp_texcoords.items.len});
-    std.debug.print("normals: {d}\n", .{tmp_normals.items.len});
-    std.debug.print("face elements: {d}\n", .{tmp_elements.items.len});
-    std.debug.print("faces: {d}\n", .{@intToFloat(f32, tmp_elements.items.len) / 3.0});
+    // std.debug.print("vertices: {d}\n", .{tmp_vertices.items.len});
+    // std.debug.print("tex coords: {d}\n", .{tmp_texcoords.items.len});
+    // std.debug.print("normals: {d}\n", .{tmp_normals.items.len});
+    // std.debug.print("face elements: {d}\n", .{tmp_elements.items.len});
+    // std.debug.print("faces: {d}\n", .{@intToFloat(f32, tmp_elements.items.len) / 3.0});
 
     // return as a Mesh struct
     // return Mesh.create(
@@ -65,7 +65,49 @@ pub fn load_obj(file_path: []const u8) !void {
     //     tmp_vertex_indices.toOwnedSlice()
     // );
 
-    std.debug.print("Finish load OBJ to Mesh.\n", .{});
+    
+    // merge all vertices
+    var output_buffer = try allocator.alloc(f32, tmp_vertices.items.len * 8); // 3 pos, 3 norm, 2 tex
+    var output_idx_buffer = try allocator.alloc(u32, tmp_elements.items.len); // num triangles
+    var i: u32 = 0;
+    var j: u32 = 0;
+    for (tmp_elements.items) |face| { // TODO: dont write out every single vertex. (?)
+        // std.debug.print("posotion index: {d}\n", .{face.position_idx});
+        var v = face.position_idx;
+        // std.debug.print("v: {d}\n", .{v});
+        // std.debug.print("face: {any}\n", .{face});
+        const pos = tmp_vertices.items[face.position_idx];
+        // const norm = tmp_normals.items[face.normal_idx];
+        // const tex = if (face.texture_idx == 0) vec2.zero() else tmp_texcoords.items[face.texture_idx];
+        const norm = if (face.normal_idx == 0) vec3.zero() else tmp_normals.items[face.normal_idx];
+
+        // // position
+        output_buffer[v*8] = pos.x;
+        output_buffer[v*8 + 1] = pos.y;
+        output_buffer[v*8 + 2] = pos.z;
+        // // normal
+        output_buffer[v*8 + 3] = norm.x;
+        output_buffer[v*8 + 4] = norm.y;
+        output_buffer[v*8 + 5] = norm.z;
+        // // texture coords
+        // output_buffer[i+6] = tex.x;
+        // output_buffer[i+7] = tex.y;
+
+        output_idx_buffer[j] = v;
+
+        i = i + 8;
+        j = j + 1; // one face at a time
+    }
+
+    // std.debug.print("Finish load OBJ to Mesh.\n", .{});
+    // std.debug.print("{any}\n", .{output_buffer});
+    // std.debug.print("{any}\n", .{output_idx_buffer});
+
+    // return as a Mesh struct
+    return Mesh.create(
+        output_buffer, // get rid of indexing for now for simplicity
+        output_idx_buffer
+    );
 }
 
 // A vertex is specified via a line starting with the letter v. That is followed by (x,y,z[,w]) coordinates. W is optional and defaults to 1.0.
@@ -101,15 +143,16 @@ fn parse_face(elements_array: *std.ArrayList(FaceElement), line: []const u8) !vo
     while (v_i < 3) {
         var vert = line_items.next().?;
         var vert_parts = std.mem.split(vert, "/");
-        var v_vertex_idx = vert_parts.next().?;
-        var v_texture_idx = vert_parts.next().?;
-        var v_normal_idx = vert_parts.next().?;
-        // std.debug.print("face: vertex: {s}, tex: {s}, normal: {s}\n", .{v1_vertex_idx, v1_texture_idx, v1_normal_idx});
+        var v_vertex_idx = vert_parts.next();
+        var v_texture_idx = vert_parts.next();
+        var v_normal_idx = vert_parts.next();
+        
+        // std.debug.print("face: vertex: {s}, tex: {s}, normal: {s}\n", .{v_vertex_idx, v_texture_idx, v_normal_idx});
 
         try elements_array.append(.{
-            .position_idx  = (std.fmt.parseUnsigned(u32, v_vertex_idx, 10) catch 1) - 1, // indexed from 1 not zero
-            .texture_index = (std.fmt.parseUnsigned(u32, v_texture_idx, 10) catch 1) - 1,
-            .normal_index  = (std.fmt.parseUnsigned(u32, v_normal_idx, 10) catch 1) - 1,
+            .position_idx  = if (v_vertex_idx != null) ((std.fmt.parseUnsigned(u32, v_vertex_idx.?, 10) catch 1) - 1) else 0, // indexed from 1 not zero
+            .texture_idx = if (v_texture_idx != null) ((std.fmt.parseUnsigned(u32, v_texture_idx.?, 10) catch 1) - 1) else 0,
+            .normal_idx  = if (v_normal_idx != null) ((std.fmt.parseUnsigned(u32, v_normal_idx.?, 10) catch 1) - 1) else 0,
         });
 
         v_i += 1;
