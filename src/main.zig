@@ -12,7 +12,7 @@ const cos = stdMath.cos;
 const sin = stdMath.sin;
 const PngImage = @import("png.zig").PngImage;
 const obj_loader = @import("obj.zig");
-const Mesh = obj_loader.Mesh;
+const Mesh = r.Mesh;
 
 // TODO: handle window resizing
 const width: i32 = 1024;
@@ -117,11 +117,6 @@ fn init() bool {
 }
 
 pub fn main() !void {
-    const mesh = try obj_loader.load_obj("assets/teddy.obj");
-    const num_vertices = @intCast(c_int, mesh.vertices.len);
-    const num_indices = @intCast(c_int, mesh.indices.len);
-    std.debug.print("vertices: {d}\n", .{num_vertices});
-    std.debug.print("indices: {d}\n", .{num_indices});
 
     // create an allocator to use
     const alloc = std.heap.page_allocator;
@@ -129,6 +124,13 @@ pub fn main() !void {
     defer alloc.free(memory);
 
     var initialised = init();
+
+    // ---- meshes
+    const mesh = try obj_loader.load_obj("assets/teddy.obj");
+    // const num_vertices = @intCast(c_int, mesh.vertices.len);
+    // const num_indices = @intCast(c_int, mesh.indices.len);
+    std.debug.print("vertices: {d}\n", .{mesh.vertices});
+    std.debug.print("indices: {d}\n", .{mesh.indices});
 
     // ---- shaders    
     const obj_shader = try r.ShaderProgram.create_from_file("shaders/lit_object.vert", "shaders/lit_object.frag");
@@ -162,18 +164,18 @@ pub fn main() !void {
     c.glEnableVertexAttribArray(2);
 
     // ---- Light VAO
-    var EBO: u32 = undefined;
-    c.glGenBuffers(1, &EBO);
-    c.glGenBuffers(1, &VBO2);
-    c.glGenVertexArrays(1, &lightVAO);
-    c.glBindVertexArray(lightVAO);
-    c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO2);
-    c.glBufferData(c.GL_ARRAY_BUFFER, num_vertices * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &mesh.vertices[0]), c.GL_STATIC_DRAW);
-    // c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
-    c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
-    c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, mesh.indices.len * @sizeOf(c.GLuint)), mesh.indices.ptr, c.GL_STATIC_DRAW);
-    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 3 * @sizeOf(c.GLfloat), null);
-    c.glEnableVertexAttribArray(0);
+    // var EBO: u32 = undefined;
+    // c.glGenBuffers(1, &EBO);
+    // c.glGenBuffers(1, &VBO2);
+    // c.glGenVertexArrays(1, &lightVAO);
+    // c.glBindVertexArray(lightVAO);
+    // c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO2);
+    // c.glBufferData(c.GL_ARRAY_BUFFER, num_vertices * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &mesh.vertices[0]), c.GL_STATIC_DRAW);
+    c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
+    // c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
+    // c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, mesh.indices.len * @sizeOf(c.GLuint)), mesh.indices.ptr, c.GL_STATIC_DRAW);
+    // c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 3 * @sizeOf(c.GLfloat), null);
+    // c.glEnableVertexAttribArray(0);
 
 
     var nbFrames: i32 = 0;
@@ -306,8 +308,8 @@ pub fn main() !void {
         // send my data
         
         // draw
-        c.glBindVertexArray(lightVAO);
-        c.glDrawElements(c.GL_TRIANGLES, num_indices, c.GL_UNSIGNED_INT, null);
+        c.glBindVertexArray(mesh.vao);
+        c.glDrawElements(c.GL_TRIANGLES, @intCast(c_int, mesh.indices), c.GL_UNSIGNED_INT, null);
 
 
         // c.glDrawArrays(c.GL_TRIANGLES, 0, verts.len / 8);

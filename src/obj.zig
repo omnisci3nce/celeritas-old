@@ -4,11 +4,12 @@ const za = @import("zalgebra");
 const vec2 = za.vec2;
 const vec3 = za.vec3;
 const SplitIterator = std.mem.SplitIterator;
+const Mesh = @import("rendering.zig").Mesh;
 
-pub const Mesh = struct {
-    vertices: []f32,
-    indices: []u32
-};
+// pub const Mesh = struct {
+//     vertices: []f32,
+//     indices: []u32
+// };
 
 // Simplest case - teapot.obj
 pub fn load_obj(file_path: []const u8) !Mesh {
@@ -43,6 +44,12 @@ pub fn load_obj(file_path: []const u8) !Mesh {
                 try tmp_vertices.append(x);
                 try tmp_vertices.append(y);
                 try tmp_vertices.append(z);
+                // Below: fill in normals and textures so indices work properly, will add OBJ normal and texture support later
+                try tmp_vertices.append(0.0);
+                try tmp_vertices.append(0.0);
+                try tmp_vertices.append(0.0);
+                try tmp_vertices.append(0.0);
+                try tmp_vertices.append(0.0);
             },
             'f' => {        // face
                 const v1 = try std.fmt.parseUnsigned(u32, line_items.next().?, 10);
@@ -57,10 +64,10 @@ pub fn load_obj(file_path: []const u8) !Mesh {
     }
 
     // return as a Mesh struct
-    return Mesh{
-        .vertices = tmp_vertices.toOwnedSlice(), // get rid of indexing for now for simplicity
-        .indices = tmp_vertex_indices.toOwnedSlice()
-    };
+    return Mesh.create(
+        tmp_vertices.toOwnedSlice(), // get rid of indexing for now for simplicity
+        tmp_vertex_indices.toOwnedSlice()
+    );
 }
 
 // fn load_file(file_path: []const u8) !SplitIterator {

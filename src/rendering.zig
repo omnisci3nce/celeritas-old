@@ -80,6 +80,55 @@ pub const Texture = struct {
     // TODO: add cleanup function
 };
 
+pub const Mesh = struct {
+    vbo: u32,
+    vao: u32 = 0,
+    ebo: u32,
+
+    vertices: usize,
+    indices: usize,
+
+    pub fn create(vertices: []f32, indices: []u32) Mesh {
+        // generate VBO
+        var VBO: u32 = undefined;
+        c.glGenBuffers(1, &VBO);
+        // upload vertex data
+        c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
+        c.glBufferData(c.GL_ARRAY_BUFFER, @intCast(c_long, vertices.len * @sizeOf(c.GLfloat)), vertices.ptr, c.GL_STATIC_DRAW);
+
+        // generate VAO - vertex attribute object
+        var VAO: u32 = undefined;
+        c.glGenVertexArrays(1, &VAO);
+        // setup attribute pointers
+        const stride = 8 * @sizeOf(c.GLfloat);
+        c.glBindVertexArray(VAO);
+        c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, stride, null);                // position
+        c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, stride, @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat)));    // normal
+        c.glVertexAttribPointer(2, 2, c.GL_FLOAT, c.GL_FALSE, stride, @intToPtr(*const c_void, 6 * @sizeOf(c.GLfloat)));    // tex coords
+        c.glEnableVertexAttribArray(0);
+        c.glEnableVertexAttribArray(1);
+        c.glEnableVertexAttribArray(2);
+
+        // generate EBO
+        var EBO: u32 = undefined;
+        c.glGenBuffers(1, &EBO);
+        // upload index data
+        c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
+        c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, indices.len * @sizeOf(c.GLuint)), indices.ptr, c.GL_STATIC_DRAW);
+
+        // log out some info
+        std.debug.print("Mesh created.\n", .{});
+
+        return Mesh{
+            .vbo = VBO,
+            .vao = VAO,
+            .ebo = EBO,
+            .vertices = vertices.len,
+            .indices = indices.len
+        };
+    }
+};
+
 pub const ShaderProgram = struct {
     program_id: c.GLuint,
     vertex_id: c.GLuint,
@@ -123,7 +172,7 @@ pub const ShaderProgram = struct {
 
         return ShaderProgram.create(vertex_source, fragment_source);
     }
-    
+
     // pub fn destroy() {}
 };
 
