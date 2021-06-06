@@ -13,12 +13,19 @@ const FaceElement = struct {
     normal_idx: u32
 };
 
+// if v -> append a vertex (x, y, z)
+// if vn -> append vertex normals
+// if vt -> 
+// if f -> append 3 vertex indices
+
 pub fn load_obj(file_path: []const u8) !Mesh {
     std.debug.print("Begin load OBJ to Mesh.\n", .{});
-    var tmp_vertices = std.ArrayList(vec3).init(allocator);             // positions
-    var tmp_normals = std.ArrayList(vec3).init(allocator);              // normals
+    var tmp_vertices  = std.ArrayList(vec3).init(allocator);            // positions
+    var tmp_normals   = std.ArrayList(vec3).init(allocator);            // normals
     var tmp_texcoords = std.ArrayList(vec2).init(allocator);            // texture coords
     var tmp_elements  = std.ArrayList(FaceElement).init(allocator);     // face elements
+    var tmp_objects   = std.ArrayList([]const u8).init(allocator);
+    var current_obj: u32 = 0;
     // don't need to deinit because I'm using toOwnedSlice later
 
     // load the file
@@ -35,11 +42,7 @@ pub fn load_obj(file_path: []const u8) !Mesh {
         // read first character
         var line_items = std.mem.split(line, " ");
         const line_header = line_items.next().?;
-
-        // if v -> append a vertex (x, y, z)
-        // if vn -> append vertex normals
-        // if vt -> 
-        // if f -> append 3 vertex indices
+        
         if (std.mem.eql(u8, line_header, "v")) {
             try parse_vertex(&tmp_vertices, line);
         } else if (std.mem.eql(u8, line_header, "vn")) {
@@ -49,7 +52,11 @@ pub fn load_obj(file_path: []const u8) !Mesh {
         } else if (std.mem.eql(u8, line_header, "f")) {
             try parse_face(&tmp_elements, line);
         } else if (std.mem.eql(u8, line_header, "mtllib")) {
-            std.debug.print("use a material lib!\n", .{});
+            // std.debug.print("use a material lib!\n", .{});
+        } else if (std.mem.eql(u8, line_header, "o")) {
+            try parse_object(&tmp_objects, line);
+            std.debug.print("Found object {d}: \"{s}\"\n", .{current_obj, tmp_objects.items[current_obj]});
+            current_obj += 1;
         } else {} // ignore
         // TODO: handle material
         // TODO: handle multiple meshes to make up one model
@@ -153,4 +160,11 @@ fn parse_face(elements_array: *std.ArrayList(FaceElement), line: []const u8) !vo
 
         v_i += 1;
     }
+}
+
+fn parse_object(objects_array: *std.ArrayList([]const u8), line: []const u8) !void {
+    var line_items = std.mem.split(line, " ");
+    _ = line_items.next(); // skip line header
+    var name = line_items.next().?;
+    try objects_array.append(name);
 }

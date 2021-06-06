@@ -103,7 +103,7 @@ pub fn main() !void {
     };
 
     // ---- meshes
-    const mesh = try obj_loader.load_obj("assets/teddy.obj");
+    const mesh = try obj_loader.load_obj("assets/backpack/backpack.obj");
     const num_vertices = @intCast(c_int, mesh.vertices);
     const num_indices = @intCast(c_int, mesh.indices);
     // std.debug.print("\nvertex attrs: {d}\n", .{mesh.vertices});

@@ -98,7 +98,7 @@ pub const Mesh = struct {
         // upload vertex data
         c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
         c.glBufferData(c.GL_ARRAY_BUFFER, @intCast(c_long, vertices.len * @sizeOf(c.GLfloat)), vertices.ptr, c.GL_STATIC_DRAW);
-        std.debug.print("vertices = {any}\n", .{vertices.len / 8}); // 8 floats per geometry vertex
+        // std.debug.print("vertices = {any}\n", .{vertices.len / 8}); // 8 floats per geometry vertex
 
         // generate VAO - vertex attribute object
         var VAO: u32 = undefined;
@@ -120,10 +120,10 @@ pub const Mesh = struct {
             // upload index data
             c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
             c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, _indices.len * @sizeOf(c.GLuint)), _indices.ptr, c.GL_STATIC_DRAW);
-            std.debug.print("triangles = {any}\n", .{_indices.len / 3}); // 3 indices per triangle
+            // std.debug.print("triangles = {any}\n", .{_indices.len / 3}); // 3 indices per triangle
         }
 
-        std.debug.print("Mesh created.\n", .{});
+        // std.debug.print("Mesh created.\n", .{});
 
         return Mesh{
             .vbo = VBO,
