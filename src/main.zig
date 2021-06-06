@@ -14,6 +14,7 @@ const PngImage = @import("png.zig").PngImage;
 const obj_loader = @import("obj.zig");
 const Mesh = r.Mesh;
 const Cube = r.Cube;
+const engine = @import("engine.zig");
 
 // TODO: handle window resizing
 const width: i32 = 1024;
@@ -95,6 +96,11 @@ pub fn main() !void {
     defer alloc.free(memory);
 
     var initialised = init();
+    var stats = engine.FrameStats{
+        .draw_calls = 0,
+        .triangle_count = 0,
+        .frame_time = 0
+    };
 
     // ---- meshes
     const mesh = try obj_loader.load_obj("assets/teddy.obj");
@@ -145,6 +151,8 @@ pub fn main() !void {
     var last_time: f32 = 0.0;
     // ---- Render loop
     while (c.glfwWindowShouldClose(window) == c.GL_FALSE) {
+        stats.draw_calls = 0; // reset frame stats
+
         // camera
         var direction = vec3.new(0.0, 0.0, 0.0);
         direction.x = cos(za.to_radians(yaw)) * cos(za.to_radians(pitch));
@@ -179,7 +187,7 @@ pub fn main() !void {
         teddy_shader.setMat4("model", model);
         teddy_shader.setMat4("view", view);
         teddy_shader.setMat4("projection", projection);
-        cube1.draw();
+        cube1.draw(&stats);
 
         // render a teddy
         c.glUseProgram(teddy_shader.program_id);

@@ -8,6 +8,7 @@ const mat4 = za.mat4;
 const vec3 = za.vec3;
 const PngImage = @import("png.zig").PngImage;
 const cube_vertices = @import("cube.zig").vertices;
+const FrameStats = @import("engine.zig").FrameStats;
 
 pub const Camera = struct {
     pos: vec3,
@@ -260,9 +261,10 @@ pub const Cube = struct {
         };
     }
 
-    pub fn draw(cube: Cube) void {
+    pub fn draw(cube: Cube, s: *FrameStats) void {
         c.glBindVertexArray(cube.mesh.vao);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 36); // cubes have 36 vertices
+        s.draw_calls += 1;
     }
 
     // TODO: pub fn destroy() void {}
