@@ -187,7 +187,7 @@ pub fn main() !void {
         teddy_shader.setMat4("model", model);
         teddy_shader.setMat4("view", view);
         teddy_shader.setMat4("projection", projection);
-        cube1.draw(&stats);
+        // cube1.draw(&stats);
 
         // render a teddy
         c.glUseProgram(teddy_shader.program_id);
