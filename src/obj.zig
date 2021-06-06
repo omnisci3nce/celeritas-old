@@ -29,11 +29,11 @@ const Object = struct {
 
 const Mtl = struct {
     name: []const u8,
-    ambient: vec3,
-    diffuse: vec3,
-    specular: vec3,
-    diffuse_map: []const u8,
-    specular_map: []const u8
+    ambient: vec3 = vec3.zero(),
+    diffuse: vec3 = vec3.zero(),
+    specular: vec3 = vec3.zero(),
+    diffuse_map: ?[]const u8 = null,
+    specular_map: ?[]const u8 = null
 };
 
 pub fn load_obj(file_path: []const u8) !Mesh {
@@ -83,7 +83,7 @@ pub fn load_obj(file_path: []const u8) !Mesh {
                 //     @intCast(u32, tmp_objects.items[current_obj-1].faces_to)});
             }
             try parse_object(&tmp_objects, line, tmp_elements.items.len);
-            std.debug.print("Found object {d}: \"{s}\"\n", .{current_obj, tmp_objects.items[current_obj].name});
+            // std.debug.print("Found object {d}: \"{s}\"\n", .{current_obj, tmp_objects.items[current_obj].name});
             current_obj += 1;
 
 
@@ -214,4 +214,35 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Mtl), line: []const u8)
     var line_items = std.mem.split(line, " ");
     _ = line_items.next(); // skip line header
     var path = line_items.next().?;
+
+    // load the file
+    const file = try std.fs.cwd().openFile("assets/backpack/backpack.mtl", .{});
+    defer file.close();
+
+    const reader = file.reader();
+    const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
+    defer allocator.free(text);
+    // get each line
+    var mtl_lines = std.mem.split(text, "\n");
+
+
+    while (mtl_lines.next()) |m_line| {
+        var m_line_items = std.mem.split(m_line, " ");
+        const m_line_header = m_line_items.next().?;
+        
+        var current_mtl: usize = 0;
+        if (std.mem.eql(u8, m_line_header, "newmtl")) {
+            const name = m_line_items.next().?;
+            const new_mtl = Mtl{ .name = name };
+            try materials_array.append(new_mtl);
+            std.debug.print("newmtl {s}\n", .{ materials_array.items[current_mtl].name });
+
+            if (materials_array.items.len > 0) {
+                current_mtl += 1; // only increment after first material has been set
+            }
+
+        } else {}
+    }
+
+    std.debug.print("I read the .mtl file!\n", .{});
 }
