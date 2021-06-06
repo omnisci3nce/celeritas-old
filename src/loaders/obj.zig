@@ -4,8 +4,8 @@ const za = @import("zalgebra");
 const vec2 = za.vec2;
 const vec3 = za.vec3;
 const SplitIterator = std.mem.SplitIterator;
-const Mesh = @import("rendering.zig").Mesh;
-const Model = @import("rendering.zig").Model;
+const Mesh = @import("../rendering.zig").Mesh;
+const Model = @import("../rendering.zig").Model;
 
 const FaceElement = struct {
     position_idx: u32,
@@ -241,7 +241,15 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Mtl), line: []const u8)
                 current_mtl += 1; // only increment after first material has been set
             }
 
-        } else {}
+        } else if (std.mem.eql(u8, m_line_header, "Ka")) {
+            // Ambient colour
+        } else if (std.mem.eql(u8, m_line_header, "Kd")) {
+            // Diffuse colour
+        } else if (std.mem.eql(u8, m_line_header, "Ks")) {
+            // Specular colour
+        } else if (std.mem.eql(u8, m_line_header, "Ns")) {
+            // Specular exponent
+        }
     }
 
     std.debug.print("I read the .mtl file!\n", .{});
