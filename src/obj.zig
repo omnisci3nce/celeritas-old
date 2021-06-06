@@ -18,15 +18,32 @@ const FaceElement = struct {
 // if vt -> 
 // if f -> append 3 vertex indices
 
+const Object = struct {
+    name: []const u8,
+    faces_from: usize,
+    faces_to: usize,
+    material: []const u8,
+    smoothing: bool,
+    material_index: ?usize
+};
+
+const Mtl = struct {
+    name: []const u8,
+    ambient: vec3,
+    diffuse: vec3,
+    specular: vec3,
+    diffuse_map: []const u8,
+    specular_map: []const u8
+};
+
 pub fn load_obj(file_path: []const u8) !Mesh {
     std.debug.print("Begin load OBJ to Mesh.\n", .{});
     var tmp_vertices  = std.ArrayList(vec3).init(allocator);            // positions
     var tmp_normals   = std.ArrayList(vec3).init(allocator);            // normals
     var tmp_texcoords = std.ArrayList(vec2).init(allocator);            // texture coords
     var tmp_elements  = std.ArrayList(FaceElement).init(allocator);     // face elements
-    var tmp_objects   = std.ArrayList([]const u8).init(allocator);
-    var current_obj: u32 = 0;
-    // don't need to deinit because I'm using toOwnedSlice later
+    var tmp_objects   = std.ArrayList(Object).init(allocator);          // "objects" submeshes
+    var tmp_materials = std.ArrayList(Mtl).init(allocator);
 
     // load the file
     const file = try std.fs.cwd().openFile(file_path, .{});
@@ -35,8 +52,12 @@ pub fn load_obj(file_path: []const u8) !Mesh {
     const reader = file.reader();
     const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
     defer allocator.free(text);
+    // get each line
     var lines = std.mem.split(text, "\n");
 
+
+    var current_obj: u32 = 0;
+    var l_i: u32 = 0;
     // read each line by line
     while (lines.next()) |line| {
         // read first character
@@ -52,14 +73,25 @@ pub fn load_obj(file_path: []const u8) !Mesh {
         } else if (std.mem.eql(u8, line_header, "f")) {
             try parse_face(&tmp_elements, line);
         } else if (std.mem.eql(u8, line_header, "mtllib")) {
-            // std.debug.print("use a material lib!\n", .{});
+            std.debug.print("use a material lib!\n", .{});
+            try load_material_lib(&tmp_materials, line);
         } else if (std.mem.eql(u8, line_header, "o")) {
-            try parse_object(&tmp_objects, line);
-            std.debug.print("Found object {d}: \"{s}\"\n", .{current_obj, tmp_objects.items[current_obj]});
+            if (tmp_objects.items.len > 0) {
+                tmp_objects.items[current_obj-1].faces_to = tmp_elements.items.len;
+                // std.debug.print("previous object faces: {d} - {d}\n", .{
+                //     @intCast(u32, tmp_objects.items[current_obj-1].faces_from),
+                //     @intCast(u32, tmp_objects.items[current_obj-1].faces_to)});
+            }
+            try parse_object(&tmp_objects, line, tmp_elements.items.len);
+            std.debug.print("Found object {d}: \"{s}\"\n", .{current_obj, tmp_objects.items[current_obj].name});
             current_obj += 1;
+
+
         } else {} // ignore
         // TODO: handle material
         // TODO: handle multiple meshes to make up one model
+
+        l_i += 1;
     }
 
     // debug info
@@ -162,9 +194,24 @@ fn parse_face(elements_array: *std.ArrayList(FaceElement), line: []const u8) !vo
     }
 }
 
-fn parse_object(objects_array: *std.ArrayList([]const u8), line: []const u8) !void {
+fn parse_object(objects_array: *std.ArrayList(Object), line: []const u8, faces_len: usize) !void {
     var line_items = std.mem.split(line, " ");
     _ = line_items.next(); // skip line header
     var name = line_items.next().?;
-    try objects_array.append(name);
+
+    const obj = Object{
+        .name = name,
+        .faces_from = faces_len,
+        .faces_to = 0,
+        .material = "",
+        .smoothing = false,
+        .material_index = null
+    };
+    try objects_array.append(obj);
+}
+
+pub fn load_material_lib(materials_array: *std.ArrayList(Mtl), line: []const u8) !void {
+    var line_items = std.mem.split(line, " ");
+    _ = line_items.next(); // skip line header
+    var path = line_items.next().?;
 }

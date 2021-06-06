@@ -192,7 +192,7 @@ pub fn main() !void {
         // render a teddy
         c.glUseProgram(teddy_shader.program_id);
         model = mat4.identity();
-        model = model.scale(vec3.new(0.05, 0.05, 0.05));
+        // model = model.scale(vec3.new(0.05, 0.05, 0.05));
         model = model.translate(vec3.new(1.0, 1.0, 4.0));
         teddy_shader.setMat4("model", model);
         teddy_shader.setMat4("view", view);
