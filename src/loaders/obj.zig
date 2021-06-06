@@ -33,7 +33,17 @@ const Mtl = struct {
     diffuse: vec3 = vec3.zero(),
     specular: vec3 = vec3.zero(),
     diffuse_map: ?[]const u8 = null,
-    specular_map: ?[]const u8 = null
+    specular_map: ?[]const u8 = null,
+    specular_strength: f32 = 32.0,
+
+    fn print (m: Mtl) void {
+        std.debug.print(
+            \\ Material:
+            \\  name: {s}
+            \\  specular strength: {d}
+            \\
+        , .{m.name, m.specular_strength});
+    }
 };
 
 pub fn load_obj(file_path: []const u8) !Mesh {
@@ -73,7 +83,7 @@ pub fn load_obj(file_path: []const u8) !Mesh {
         } else if (std.mem.eql(u8, line_header, "f")) {
             try parse_face(&tmp_elements, line);
         } else if (std.mem.eql(u8, line_header, "mtllib")) {
-            std.debug.print("use a material lib!\n", .{});
+            // std.debug.print("use a material lib!\n", .{});
             try load_material_lib(&tmp_materials, line);
         } else if (std.mem.eql(u8, line_header, "o")) {
             if (tmp_objects.items.len > 0) {
@@ -226,18 +236,18 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Mtl), line: []const u8)
     var mtl_lines = std.mem.split(text, "\n");
 
 
+    var current_mtl: usize = 0;
     while (mtl_lines.next()) |m_line| {
         var m_line_items = std.mem.split(m_line, " ");
         const m_line_header = m_line_items.next().?;
         
-        var current_mtl: usize = 0;
         if (std.mem.eql(u8, m_line_header, "newmtl")) {
             const name = m_line_items.next().?;
             const new_mtl = Mtl{ .name = name };
             try materials_array.append(new_mtl);
-            std.debug.print("newmtl {s}\n", .{ materials_array.items[current_mtl].name });
+            // std.debug.print("newmtl {s}\n", .{ materials_array.items[current_mtl].name });
 
-            if (materials_array.items.len > 0) {
+            if (materials_array.items.len > 1) {
                 current_mtl += 1; // only increment after first material has been set
             }
 
@@ -249,8 +259,11 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Mtl), line: []const u8)
             // Specular colour
         } else if (std.mem.eql(u8, m_line_header, "Ns")) {
             // Specular exponent
+            const ns = try std.fmt.parseFloat(f32, m_line_items.next().?);
+            materials_array.items[current_mtl].specular_strength = ns;
         }
     }
 
-    std.debug.print("I read the .mtl file!\n", .{});
+    materials_array.items[current_mtl].print();
+    // std.debug.print("I read the .mtl file!\n", .{});
 }
