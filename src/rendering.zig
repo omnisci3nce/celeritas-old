@@ -148,7 +148,13 @@ pub const Mesh = struct {
 pub const Model = struct {
     meshes: []Mesh,
     // materials
-    use_gamma_correction: bool
+    use_gamma_correction: bool,
+
+    pub fn draw(m: Model) void {
+        for (m.meshes) |mesh| {
+            mesh.draw();
+        } 
+    }
 };
 
 pub const ShaderProgram = struct {

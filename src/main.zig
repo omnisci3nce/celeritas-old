@@ -170,7 +170,7 @@ pub fn main() !void {
 
         nbFrames += 1;
         if ( currentFrame - last_time >= 2.0 ){
-            std.debug.print("{d} ms/frame \n", .{ 1000.0 / @intToFloat(f32, nbFrames)});
+            // std.debug.print("{d} ms/frame \n", .{ 1000.0 / @intToFloat(f32, nbFrames)});
             nbFrames = 0;
             last_time += 1.0;
             mesh_index += 1;
@@ -208,7 +208,8 @@ pub fn main() !void {
         teddy_shader.setMat4("model", model);
         teddy_shader.setMat4("view", view);
         teddy_shader.setMat4("projection", projection);
-        asset_model.meshes[mesh_index].draw();
+        // asset_model.meshes[mesh_index].draw();
+        asset_model.draw();
         
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
