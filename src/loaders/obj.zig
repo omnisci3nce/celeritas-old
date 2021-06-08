@@ -6,6 +6,7 @@ const vec3 = za.vec3;
 const SplitIterator = std.mem.SplitIterator;
 const Mesh = @import("../rendering.zig").Mesh;
 const Model = @import("../rendering.zig").Model;
+const Material = @import("../rendering.zig").Material;
 
 const Position = struct {
 
@@ -59,8 +60,7 @@ pub fn load_obj(file_path: []const u8) !Model {
     var tmp_faces  = std.ArrayList(FaceElement).init(allocator);        // face elements
     var tmp_meshes = std.ArrayList(Mesh).init(allocator);
 
-    // TODO: materials
-    // var tmp_materials = std.ArrayList(Mtl).init(allocator);
+    var tmp_materials = std.ArrayList(Material).init(allocator);
 
     // load the file
     const file = try std.fs.cwd().openFile(file_path, .{});
@@ -94,7 +94,7 @@ pub fn load_obj(file_path: []const u8) !Model {
         } else if (std.mem.eql(u8, line_header, "f")) {
             try parse_face(&tmp_faces, line);
         } else if (std.mem.eql(u8, line_header, "mtllib")) {
-            // try load_material_lib(&tmp_materials, line);
+            try load_material_lib(&tmp_materials, line);
         } else if (std.mem.eql(u8, line_header, "o")) {
             // first 'o' doesnt create an object
             if (!first_object) {
@@ -186,12 +186,6 @@ fn parse_object(line: []const u8) ![]const u8 {
     return name;
 }
 
-// var tmp_positions  = std.ArrayList(vec3).init(allocator);           // positions
-//     var tmp_normals   = std.ArrayList(vec3).init(allocator);            // normals
-//     var tmp_texcoords = std.ArrayList(vec2).init(allocator);            // texture coords
-//     var tmp_faces  = std.ArrayList(FaceElement).init(allocator);        // face elements
-//     var tmp_meshes = std.ArrayList(Mesh).init(allocator);
-
 fn create_submesh(
     tmp_positions: *std.ArrayList(vec3),
     tmp_normals:   *std.ArrayList(vec3),
@@ -223,27 +217,34 @@ fn create_submesh(
         i+= 1;
     }
 
-    // std.debug.print("vertex array length: {any}\n", .{vertices_buffer.len});
-    // std.debug.print("index array length: {any}\n", .{indices_buffer.len});
-
-    // create mesh
-    // update variables
-
     return Mesh.create(
         vertices_buffer,
         indices_buffer
     );
 }
 
-// fn create_object()
+const LoadMaterialLibError = error{
+    FileNotFound,
+    ContainsNoMaterials
+};
 
-pub fn load_material_lib(materials_array: *std.ArrayList(Mtl), line: []const u8) !void {
+fn parse_float3(line: []const u8) !vec3 {
+    var line_items = std.mem.split(line, " ");
+    _ = line_items.next(); // skip line header
+    const x = try std.fmt.parseFloat(f32, line_items.next().?);
+    const y = try std.fmt.parseFloat(f32, line_items.next().?);
+    const z = try std.fmt.parseFloat(f32, line_items.next().?);
+    return vec3.new(x, y, z);
+}
+
+pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []const u8) !void {
+    std.debug.print("BEGIN load material lib\n", .{});
     var line_items = std.mem.split(line, " ");
     _ = line_items.next(); // skip line header
     var path = line_items.next().?;
 
     // load the file
-    const file = try std.fs.cwd().openFile("assets/backpack/backpack.mtl", .{});
+    const file = try std.fs.cwd().openFile("assets/backpack/backpack.mtl", .{}); // TODO: dont hardcode path xD
     defer file.close();
 
     const reader = file.reader();
@@ -252,7 +253,7 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Mtl), line: []const u8)
     // get each line
     var mtl_lines = std.mem.split(text, "\n");
 
-
+    
     var current_mtl: usize = 0;
     while (mtl_lines.next()) |m_line| {
         var m_line_items = std.mem.split(m_line, " ");
@@ -260,7 +261,7 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Mtl), line: []const u8)
         
         if (std.mem.eql(u8, m_line_header, "newmtl")) {
             const name = m_line_items.next().?;
-            const new_mtl = Mtl{ .name = name };
+            const new_mtl = Material{ .name = name };
             try materials_array.append(new_mtl);
             // std.debug.print("newmtl {s}\n", .{ materials_array.items[current_mtl].name });
 
@@ -272,13 +273,35 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Mtl), line: []const u8)
             // Ambient colour
         } else if (std.mem.eql(u8, m_line_header, "Kd")) {
             // Diffuse colour
+            const colour = try parse_float3(m_line);
+            // try materials_array.items[current_mtl];
         } else if (std.mem.eql(u8, m_line_header, "Ks")) {
             // Specular colour
         } else if (std.mem.eql(u8, m_line_header, "Ns")) {
             // Specular exponent
             const ns = try std.fmt.parseFloat(f32, m_line_items.next().?);
             materials_array.items[current_mtl].specular_strength = ns;
+        } else if (std.mem.eql(u8, m_line_header, "d")) {
+            // 'dissolved' - transparency 1.0 = opaque
+        } else if (std.mem.eql(u8, m_line_header, "Ni")) {
+            // optical density - index of refraction
+        } else if (std.mem.eql(u8, m_line_header, "map_Ka")) {
+            // ambient texture map    
+        } else if (std.mem.eql(u8, m_line_header, "map_Kd")) {
+            // diffuse texture map
+        } else if (std.mem.eql(u8, m_line_header, "map_Ks")) {
+            // specular colour texture map
+        } else if (std.mem.eql(u8, m_line_header, "map_Ns")) {
+            // specular highlight component
+        } else if (std.mem.eql(u8, m_line_header, "map_bump") or std.mem.eql(u8, m_line_header, "map_Bump")) {
+            // bump / normal map
+        } else if (std.mem.eql(u8, m_line_header, "map_d")) {
+            // alpha texture map
         }
+    }
+
+    if (!materials_array.items.len > 0) {
+        return error.ContainsNoMaterials;
     }
 
     materials_array.items[current_mtl].print();

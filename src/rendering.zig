@@ -25,18 +25,15 @@ pub const Camera = struct {
 };
 
 pub const Material = struct {
-    ambient: vec3,
-    diffuse: vec3,
-    specular: vec3,
-    shininess: float,
-    pub fn create(ambient: vec3, diffuse: vec3, specular: vec3, shininess: float) Material {
-        return Material{
-            .ambient = ambient,
-            .diffuse = diffuse,
-            .specular = specular,
-            .shininess = shininess,
-        };
-    }
+    name: []const u8,
+    ambient_texture: ?Texture  = null,
+    diffuse_texture: ?Texture  = null,
+    specular_texture: ?Texture = null,
+    ambient_colour: vec3       = vec3.zero(),
+    diffuse_colour: vec3       = vec3.zero(),
+    specular_colour: vec3      = vec3.zero(),
+    specular_exponent: f32     = 32.0,
+    transparency: f32          = 1.0
 };
 
 pub const Texture = struct {
