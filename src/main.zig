@@ -104,15 +104,6 @@ pub fn main() !void {
 
     // ---- meshes
     const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
-    // std.debug.print("meshes: {d}\n", .{asset_model.meshes.len});
-    // const asset_model = try obj_loader.load_obj("assets/teddy.obj");
-
-    // const num_vertices = @intCast(c_int, asset_model.meshes[0].vertices);
-    // const num_indices = @intCast(c_int, asset_model.meshes[0].indices);
-    // std.debug.print("\nvertex attrs: {d}\n", .{mesh.vertices});
-    // std.debug.print("vertices: {d}\n", .{mesh.vertices / 8});
-    // std.debug.print("indices: {d}\n", .{mesh.indices});
-    // std.debug.print("triangles: {d}\n", .{mesh.indices / 3});
 
     // ---- shaders    
     const obj_shader = try r.ShaderProgram.create_from_file("shaders/lit_object.vert", "shaders/lit_object.frag");
@@ -210,7 +201,6 @@ pub fn main() !void {
         teddy_shader.setMat4("projection", projection);
         // asset_model.meshes[mesh_index].draw();
         asset_model.draw();
-        
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         c.glfwSwapBuffers(window);

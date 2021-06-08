@@ -93,11 +93,6 @@ pub fn load_obj(file_path: []const u8) !Model {
             try parse_texture_coords(&tmp_texcoords, line);
         } else if (std.mem.eql(u8, line_header, "f")) {
             try parse_face(&tmp_faces, line);
-            // try tmp_faces.append(FaceElement{
-            //     .position_idx = 0,
-            //     .normal_idx = 0,
-            //     .texture_idx = 0
-            // });
         } else if (std.mem.eql(u8, line_header, "mtllib")) {
             // try load_material_lib(&tmp_materials, line);
         } else if (std.mem.eql(u8, line_header, "o")) {
@@ -105,10 +100,15 @@ pub fn load_obj(file_path: []const u8) !Model {
             if (!first_object) {
                 const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_faces, position_offset, face_offset);
                 try tmp_meshes.append(mesh);
+                std.debug.print("Submesh {s} stats: {d} vertices - {d} normals - {d} faces \n", .{
+                    object_name_b,
+                    tmp_positions.items.len - position_offset,
+                    tmp_normals.items.len - normal_offset,
+                    tmp_faces.items.len - face_offset
+                });
                 position_offset = tmp_positions.items.len;
-                normal_offset = tmp_positions.items.len;
+                normal_offset = tmp_normals.items.len;
                 face_offset = tmp_faces.items.len;
-                std.debug.print("{d} - {d} - {d}\n", .{position_offset, normal_offset, face_offset});
             }
             first_object = false;
             const object_name = try parse_object(line); // set current object name
@@ -117,7 +117,6 @@ pub fn load_obj(file_path: []const u8) !Model {
 
         } else {} // ignore
         // TODO: handle material
-        // TODO: handle multiple meshes to make up one model
     }
 
     // last mesh or if one wasnt created
@@ -125,7 +124,6 @@ pub fn load_obj(file_path: []const u8) !Model {
         const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_faces, position_offset, face_offset);
         try tmp_meshes.append(mesh);
     }
-
 
     std.debug.print("Num sub-meshes: {d}\n", .{tmp_meshes.items.len});
 
@@ -144,8 +142,6 @@ fn parse_vertex(line: []const u8) !vec3 {
     const z = try std.fmt.parseFloat(f32, line_items.next().?);
     return vec3.new(x, y, z);
 }
-
-// TODO:
 
 fn parse_normal(normal_array: *std.ArrayList(vec3), line: []const u8) !void {
     var line_items = std.mem.split(line, " ");
@@ -172,8 +168,6 @@ fn parse_face(elements_array: *std.ArrayList(FaceElement), line: []const u8) !vo
         var v_texture_idx = vert_parts.next();
         var v_normal_idx = vert_parts.next();
         
-        // std.debug.print("face: vertex: {s}, tex: {s}, normal: {s}\n", .{v_vertex_idx, v_texture_idx, v_normal_idx});
-
         try elements_array.append(.{
             .position_idx  = if (v_vertex_idx != null) ((std.fmt.parseUnsigned(u32, v_vertex_idx.?, 10) catch 1) - 1) else 0, // indexed from 1 not zero
             .texture_idx = if (v_texture_idx != null) ((std.fmt.parseUnsigned(u32, v_texture_idx.?, 10) catch 1) - 1) else 0,
