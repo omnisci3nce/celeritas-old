@@ -76,7 +76,7 @@ fn init() bool {
         panic("unable to create window\n", .{});
     };
 
-    c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_DISABLED);  
+    // c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_DISABLED);  
 
     _ = c.glfwSetKeyCallback(window, key_callback);
     _ = c.glfwSetCursorPosCallback(window, mouse_callback);
@@ -103,9 +103,12 @@ pub fn main() !void {
     };
 
     // ---- meshes
-    const mesh = try obj_loader.load_obj("assets/backpack/backpack.obj");
-    const num_vertices = @intCast(c_int, mesh.vertices);
-    const num_indices = @intCast(c_int, mesh.indices);
+    const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
+    // std.debug.print("meshes: {d}\n", .{asset_model.meshes.len});
+    // const asset_model = try obj_loader.load_obj("assets/teddy.obj");
+
+    // const num_vertices = @intCast(c_int, asset_model.meshes[0].vertices);
+    // const num_indices = @intCast(c_int, asset_model.meshes[0].indices);
     // std.debug.print("\nvertex attrs: {d}\n", .{mesh.vertices});
     // std.debug.print("vertices: {d}\n", .{mesh.vertices / 8});
     // std.debug.print("indices: {d}\n", .{mesh.indices});
@@ -126,11 +129,7 @@ pub fn main() !void {
     var objectVAO: u32 = undefined;
     var lightVAO: u32 = undefined;
 
-    const cube1 = try Cube.create(teddy_shader);
-    // const cube2 = try Cube.create(teddy_shader);
-    // const cube3 = try Cube.create(teddy_shader);
-    // const cube4 = try Cube.create(teddy_shader);
-    // const cube5 = try Cube.create(teddy_shader);
+    // const cube1 = try Cube.create(teddy_shader);
 
     // TODO: move to one time setup to a separate function
     c.glGenVertexArrays(1, &objectVAO);
@@ -148,7 +147,11 @@ pub fn main() !void {
     c.glVertexAttribPointer(2, 2, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), tex_offset); // texture coord
     c.glEnableVertexAttribArray(2);
 
+
+    var nbFrames: i32 = 0;
     var last_time: f32 = 0.0;
+
+    var mesh_index: usize = 0;
     // ---- Render loop
     while (c.glfwWindowShouldClose(window) == c.GL_FALSE) {
         stats.draw_calls = 0; // reset frame stats
@@ -164,6 +167,14 @@ pub fn main() !void {
         const currentFrame = c.glfwGetTime();
         delta_time = currentFrame - last_frame;
         last_frame = currentFrame;
+
+        nbFrames += 1;
+        if ( currentFrame - last_time >= 2.0 ){
+            std.debug.print("{d} ms/frame \n", .{ 1000.0 / @intToFloat(f32, nbFrames)});
+            nbFrames = 0;
+            last_time += 1.0;
+            mesh_index += 1;
+        }
 
         // ---- input
         process_input(window);
@@ -182,8 +193,8 @@ pub fn main() !void {
         // render a cube
         c.glUseProgram(teddy_shader.program_id);
         var model = mat4.identity();
-        model = model.scale(cube1.scale); 
-        model = model.translate(cube1.translation);
+        // model = model.scale(cube1.scale); 
+        // model = model.translate(cube1.translation);
         teddy_shader.setMat4("model", model);
         teddy_shader.setMat4("view", view);
         teddy_shader.setMat4("projection", projection);
@@ -192,12 +203,13 @@ pub fn main() !void {
         // render a teddy
         c.glUseProgram(teddy_shader.program_id);
         model = mat4.identity();
-        // model = model.scale(vec3.new(0.05, 0.05, 0.05));
-        model = model.translate(vec3.new(1.0, 1.0, 4.0));
+        model = model.scale(vec3.new(0.7, 0.7, 0.7));
+        // model = model.translate(vec3.new(1.0, 1.0, 4.0));
         teddy_shader.setMat4("model", model);
         teddy_shader.setMat4("view", view);
         teddy_shader.setMat4("projection", projection);
-        mesh.draw();
+        asset_model.meshes[mesh_index].draw();
+        
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         c.glfwSwapBuffers(window);

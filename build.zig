@@ -31,4 +31,14 @@ pub fn build(b: *Builder) void {
     const run = exe.run();
     run.step.dependOn(b.getInstallStep());
     play.dependOn(&run.step);
+
+    var tests = b.addTest("src/loaders/obj.zig");
+    tests.setBuildMode(mode);
+    tests.linkSystemLibrary("c");
+    tests.addPackagePath("zalgebra", "deps/zalgebra/src/main.zig");
+    tests.addIncludeDir("deps/zalgebra");
+    tests.addIncludeDir("src");
+
+    const test_step = b.step("test", "Run library tests");
+    test_step.dependOn(&tests.step);
 }

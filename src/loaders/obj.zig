@@ -7,6 +7,10 @@ const SplitIterator = std.mem.SplitIterator;
 const Mesh = @import("../rendering.zig").Mesh;
 const Model = @import("../rendering.zig").Model;
 
+const Position = struct {
+
+};
+
 const FaceElement = struct {
     position_idx: u32,
     texture_idx: u32,
@@ -22,6 +26,7 @@ const Object = struct {
     name: []const u8,
     faces_from: usize,
     faces_to: usize,
+    vertex_count: u32,
     material: []const u8,
     smoothing: bool,
     material_index: ?usize
@@ -36,7 +41,7 @@ const Mtl = struct {
     specular_map: ?[]const u8 = null,
     specular_strength: f32 = 32.0,
 
-    fn print (m: Mtl) void {
+    fn print (m: Mtl) void { // debug print
         std.debug.print(
             \\ Material:
             \\  name: {s}
@@ -46,14 +51,16 @@ const Mtl = struct {
     }
 };
 
-pub fn load_obj(file_path: []const u8) !Mesh {
+pub fn load_obj(file_path: []const u8) !Model {
     std.debug.print("Begin load OBJ to Mesh.\n", .{});
-    var tmp_vertices  = std.ArrayList(vec3).init(allocator);            // positions
+    var tmp_positions  = std.ArrayList(vec3).init(allocator);           // positions
     var tmp_normals   = std.ArrayList(vec3).init(allocator);            // normals
     var tmp_texcoords = std.ArrayList(vec2).init(allocator);            // texture coords
-    var tmp_elements  = std.ArrayList(FaceElement).init(allocator);     // face elements
-    var tmp_objects   = std.ArrayList(Object).init(allocator);          // "objects" submeshes
-    var tmp_materials = std.ArrayList(Mtl).init(allocator);
+    var tmp_faces  = std.ArrayList(FaceElement).init(allocator);        // face elements
+    var tmp_meshes = std.ArrayList(Mesh).init(allocator);
+
+    // TODO: materials
+    // var tmp_materials = std.ArrayList(Mtl).init(allocator);
 
     // load the file
     const file = try std.fs.cwd().openFile(file_path, .{});
@@ -62,107 +69,80 @@ pub fn load_obj(file_path: []const u8) !Mesh {
     const reader = file.reader();
     const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
     defer allocator.free(text);
-    // get each line
-    var lines = std.mem.split(text, "\n");
+    
+    var lines = std.mem.split(text, "\n"); // get each line
 
+    var position_offset: usize = 0;
+    var normal_offset: usize = 0;
+    var texcoord_offset: usize = 0;
+    var face_offset: usize = 0;
 
-    var current_obj: u32 = 0;
-    var l_i: u32 = 0;
+    var object_name_b = try allocator.alloc(u8, 1024); // TODO: not using name at the moment
+    var first_object = true;
     // read each line by line
     while (lines.next()) |line| {
-        // read first character
         var line_items = std.mem.split(line, " ");
-        const line_header = line_items.next().?;
+        const line_header = line_items.next().?; // read first character
         
         if (std.mem.eql(u8, line_header, "v")) {
-            try parse_vertex(&tmp_vertices, line);
+            const pos = try parse_vertex(line);
+            try tmp_positions.append(pos);
         } else if (std.mem.eql(u8, line_header, "vn")) {
             try parse_normal(&tmp_normals, line);
         } else if (std.mem.eql(u8, line_header, "vt")) {
             try parse_texture_coords(&tmp_texcoords, line);
         } else if (std.mem.eql(u8, line_header, "f")) {
-            try parse_face(&tmp_elements, line);
+            try parse_face(&tmp_faces, line);
+            // try tmp_faces.append(FaceElement{
+            //     .position_idx = 0,
+            //     .normal_idx = 0,
+            //     .texture_idx = 0
+            // });
         } else if (std.mem.eql(u8, line_header, "mtllib")) {
-            // std.debug.print("use a material lib!\n", .{});
-            try load_material_lib(&tmp_materials, line);
+            // try load_material_lib(&tmp_materials, line);
         } else if (std.mem.eql(u8, line_header, "o")) {
-            if (tmp_objects.items.len > 0) {
-                tmp_objects.items[current_obj-1].faces_to = tmp_elements.items.len;
-                // std.debug.print("previous object faces: {d} - {d}\n", .{
-                //     @intCast(u32, tmp_objects.items[current_obj-1].faces_from),
-                //     @intCast(u32, tmp_objects.items[current_obj-1].faces_to)});
+            // first 'o' doesnt create an object
+            if (!first_object) {
+                const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_faces, position_offset, face_offset);
+                try tmp_meshes.append(mesh);
+                position_offset = tmp_positions.items.len;
+                normal_offset = tmp_positions.items.len;
+                face_offset = tmp_faces.items.len;
+                std.debug.print("{d} - {d} - {d}\n", .{position_offset, normal_offset, face_offset});
             }
-            try parse_object(&tmp_objects, line, tmp_elements.items.len);
-            // std.debug.print("Found object {d}: \"{s}\"\n", .{current_obj, tmp_objects.items[current_obj].name});
-            current_obj += 1;
-
+            first_object = false;
+            const object_name = try parse_object(line); // set current object name
+            std.mem.set(u8, object_name_b, 0);
+            std.mem.copy(u8, object_name_b, object_name);
 
         } else {} // ignore
         // TODO: handle material
         // TODO: handle multiple meshes to make up one model
-
-        l_i += 1;
     }
 
-    // debug info
-    // std.debug.print("vertices: {d}\n", .{tmp_vertices.items.len});
-    // std.debug.print("tex coords: {d}\n", .{tmp_texcoords.items.len});
-    // std.debug.print("normals: {d}\n", .{tmp_normals.items.len});
-    // std.debug.print("face elements: {d}\n", .{tmp_elements.items.len});
-    // std.debug.print("faces: {d}\n", .{@intToFloat(f32, tmp_elements.items.len) / 3.0});
-
-    // merge all vertices
-    var output_buffer = try allocator.alloc(f32, tmp_vertices.items.len * 8); // 3 pos, 3 norm, 2 tex
-    var output_idx_buffer = try allocator.alloc(u32, tmp_elements.items.len); // num triangles
-    var i: u32 = 0;
-    var j: u32 = 0;
-    for (tmp_elements.items) |face| { // TODO: dont write out every single vertex. (?)
-        // std.debug.print("posotion index: {d}\n", .{face.position_idx});
-        var v = face.position_idx;
-        // std.debug.print("v: {d}\n", .{v});
-        // std.debug.print("face: {any}\n", .{face});
-        const pos = tmp_vertices.items[face.position_idx];
-        // const norm = tmp_normals.items[face.normal_idx];
-        // const tex = if (face.texture_idx == 0) vec2.zero() else tmp_texcoords.items[face.texture_idx];
-        const norm = if (face.normal_idx == 0) vec3.zero() else tmp_normals.items[face.normal_idx];
-
-        // // position
-        output_buffer[v*8] = pos.x;
-        output_buffer[v*8 + 1] = pos.y;
-        output_buffer[v*8 + 2] = pos.z;
-        // // normal
-        output_buffer[v*8 + 3] = norm.x;
-        output_buffer[v*8 + 4] = norm.y;
-        output_buffer[v*8 + 5] = norm.z;
-        // // texture coords
-        // output_buffer[i+6] = tex.x;
-        // output_buffer[i+7] = tex.y;
-
-        output_idx_buffer[j] = v;
-
-        i = i + 8;
-        j = j + 1; // one face at a time
+    // last mesh or if one wasnt created
+    if (tmp_positions.items.len > 0 and tmp_faces.items.len != face_offset) {
+        const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_faces, position_offset, face_offset);
+        try tmp_meshes.append(mesh);
     }
 
-    // std.debug.print("Finish load OBJ to Mesh.\n", .{});
-    // std.debug.print("{any}\n", .{output_buffer});
-    // std.debug.print("{any}\n", .{output_idx_buffer});
 
-    // return as a Mesh struct
-    return Mesh.create(
-        output_buffer, // get rid of indexing for now for simplicity
-        output_idx_buffer
-    );
+    std.debug.print("Num sub-meshes: {d}\n", .{tmp_meshes.items.len});
+
+    return Model{
+        .meshes = tmp_meshes.toOwnedSlice(),
+        .use_gamma_correction = false
+    };
 }
 
 // A vertex is specified via a line starting with the letter v. That is followed by (x,y,z[,w]) coordinates. W is optional and defaults to 1.0.
-fn parse_vertex(vertex_array: *std.ArrayList(vec3), line: []const u8) !void {
+fn parse_vertex(line: []const u8) !vec3 {
     var line_items = std.mem.split(line, " ");
     _ = line_items.next(); // skip line header
     const x = try std.fmt.parseFloat(f32, line_items.next().?);
     const y = try std.fmt.parseFloat(f32, line_items.next().?);
     const z = try std.fmt.parseFloat(f32, line_items.next().?);
-    try vertex_array.append(vec3.new(x, y, z));
+    return vec3.new(x, y, z);
 }
 
 // TODO:
@@ -204,21 +184,64 @@ fn parse_face(elements_array: *std.ArrayList(FaceElement), line: []const u8) !vo
     }
 }
 
-fn parse_object(objects_array: *std.ArrayList(Object), line: []const u8, faces_len: usize) !void {
+fn parse_object(line: []const u8) ![]const u8 {
     var line_items = std.mem.split(line, " ");
     _ = line_items.next(); // skip line header
     var name = line_items.next().?;
 
-    const obj = Object{
-        .name = name,
-        .faces_from = faces_len,
-        .faces_to = 0,
-        .material = "",
-        .smoothing = false,
-        .material_index = null
-    };
-    try objects_array.append(obj);
+    return name;
 }
+
+// var tmp_positions  = std.ArrayList(vec3).init(allocator);           // positions
+//     var tmp_normals   = std.ArrayList(vec3).init(allocator);            // normals
+//     var tmp_texcoords = std.ArrayList(vec2).init(allocator);            // texture coords
+//     var tmp_faces  = std.ArrayList(FaceElement).init(allocator);        // face elements
+//     var tmp_meshes = std.ArrayList(Mesh).init(allocator);
+
+fn create_submesh(
+    tmp_positions: *std.ArrayList(vec3),
+    tmp_normals:   *std.ArrayList(vec3),
+    tmp_faces:     *std.ArrayList(FaceElement),
+    position_offset: usize,
+    face_offset: usize
+) !Mesh {
+    // position offset to current position len - allocate for vertex array
+    var vertices_buffer = try allocator.alloc(f32, (tmp_positions.items.len - position_offset) * 8);
+    // faces offset to current faces len - allocate for indices array
+    var indices_buffer = try allocator.alloc(u32, (tmp_faces.items.len - face_offset) );
+    // push vertices (pos, norm, tex)
+    // push indices (subtract each offset from each position/normal/t to get correct index into array)
+    var num_faces = tmp_faces.items.len - face_offset;
+    var i: usize = 0;
+    while (i < num_faces) {
+        const face = tmp_faces.items[face_offset + i];
+        const v = face.position_idx;
+        const pos = tmp_positions.items[face.position_idx];
+        const norm = if (face.normal_idx == 0) vec3.zero() else tmp_normals.items[face.normal_idx];
+        const relative_pos_i = v - position_offset;
+        // std.debug.print("{any}\n", .{relative_pos_i});
+        vertices_buffer[relative_pos_i * 8] = pos.x;
+        vertices_buffer[relative_pos_i * 8 + 1] = pos.y;
+        vertices_buffer[relative_pos_i * 8 + 2] = pos.z;
+
+        indices_buffer[i] = @intCast(u32, relative_pos_i);
+
+        i+= 1;
+    }
+
+    // std.debug.print("vertex array length: {any}\n", .{vertices_buffer.len});
+    // std.debug.print("index array length: {any}\n", .{indices_buffer.len});
+
+    // create mesh
+    // update variables
+
+    return Mesh.create(
+        vertices_buffer,
+        indices_buffer
+    );
+}
+
+// fn create_object()
 
 pub fn load_material_lib(materials_array: *std.ArrayList(Mtl), line: []const u8) !void {
     var line_items = std.mem.split(line, " ");
@@ -267,3 +290,78 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Mtl), line: []const u8)
     materials_array.items[current_mtl].print();
     // std.debug.print("I read the .mtl file!\n", .{});
 }
+
+
+
+// Tests
+
+const builtin = @import("builtin");
+const expect = std.testing.expect;
+const expectEqual = std.testing.expectEqual;
+
+
+test "builtin.is_test" {
+    expect(builtin.is_test);
+}
+
+
+// unit tests
+
+// test each parse command
+
+test "parse_vertex - regular vertex" {
+    const v = try parse_vertex("v 1.0 1.0 1.0");
+    expectEqual(vec3.is_eq(v, vec3.new(1.0, 1.0, 1.0)), true);
+}
+
+test "parse_vertex - negative numbers" {
+    const v = try parse_vertex("v -3.0 -99.0 1.0");
+    expectEqual(vec3.is_eq(v, vec3.new(-3.0, -99.0, 1.0)), true);
+}
+
+// integrations tests
+
+// test with a cube
+
+test "load_obj - cube" {
+    // const model = try load_obj(cube_obj);
+
+    // expect(model.meshes.items[0].num_vertices == 8);
+    // expect(model.meshes.items[0].num_indices  == 36);
+    // expect(model.total_triangles == 12);
+    // expect(model.materials.items.len == 0);
+}
+
+// test with a multi object model
+
+
+// arrange
+
+const cube_obj =  \\g cube
+\\v 0.0 0.0 0.0
+\\v 0.0 0.0 1.0
+\\v 0.0 1.0 0.0
+\\v 0.0 1.0 1.0
+\\v 1.0 0.0 0.0
+\\v 1.0 0.0 1.0
+\\v 1.0 1.0 0.0
+\\v 1.0 1.0 1.0
+\\vn 0.0 0.0 1.0
+\\vn 0.0 0.0 -1.0
+\\vn 0.0 1.0 0.0
+\\vn 0.0 -1.0 0.0
+\\vn 1.0 0.0 0.0
+\\vn -1.0 0.0 0.0
+\\f 1//2 7//2 5//2
+\\f 1//2 3//2 7//2 
+\\f 1//6 4//6 3//6 
+\\f 1//6 2//6 4//6 
+\\f 3//3 8//3 7//3 
+\\f 3//3 4//3 8//3 
+\\f 5//5 7//5 8//5 
+\\f 5//5 8//5 6//5 
+\\f 1//4 5//4 6//4 
+\\f 1//4 6//4 2//4 
+\\f 2//1 6//1 8//1 
+\\f 2//1 8//1 4//1
+;
