@@ -63,6 +63,13 @@ pub fn load_obj(file_path: []const u8) !Model {
     const file = try std.fs.cwd().openFile(file_path, .{});
     defer file.close();
 
+
+    // get directory to pass to material loading because it uses relative paths
+    const dir = std.fs.path.dirname(file_path).?;
+    std.debug.print("dir: {s}\n", .{dir});
+
+
+
     const reader = file.reader();
     const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
     defer allocator.free(text);
@@ -91,7 +98,7 @@ pub fn load_obj(file_path: []const u8) !Model {
         } else if (std.mem.eql(u8, line_header, "f")) {
             try parse_face(&tmp_faces, line);
         } else if (std.mem.eql(u8, line_header, "mtllib")) {
-            try load_material_lib(&tmp_materials, line);
+            try load_material_lib(&tmp_materials, line, dir);
         } else if (std.mem.eql(u8, line_header, "o")) {
             // first 'o' doesnt create an object
             if (!first_object) {
@@ -256,13 +263,17 @@ fn parse_str1(line: []const u8) ![]const u8 {
     return str;
 }
 
-pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []const u8) !void {
+pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []const u8, directory: []const u8) !void {
     std.debug.print("BEGIN load material lib\n", .{});
     var line_items = std.mem.split(line, " ");
     _ = line_items.next(); // skip line header
     var path = line_items.next().?;
 
     // load the file
+    // const dir = try std.fs.openDirAbsolute(directory, .{});
+    // const file = try dir.openFile("assets/911.mtl", .{}); // TODO: dont hardcode path xD
+    // defer file.close();
+
     const file = try std.fs.cwd().openFile("assets/backpack/backpack.mtl", .{}); // TODO: dont hardcode path xD
     defer file.close();
 
@@ -315,8 +326,28 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
         } else if (std.mem.eql(u8, m_line_header, "map_Kd")) {
             // diffuse texture map
             // TODO
-            const tex_path = try parse_str1(line);
-            const texture = try Texture.create("assets/backpack/diffuse.png");
+            const tex_path = try parse_str1(m_line);
+
+            // concatenate directory path with texture 
+            // const full = directory + tex_path;
+
+            // const buffer = std.ArrayList([]const u8).init(allocator);
+            // // std.debug.print("path: {s}\n", .{directory});
+            // try buffer.append(directory);
+            // try buffer.append(tex_path);
+
+            std.debug.print("tex path: {s}\n", .{tex_path});
+
+            // const final = buffer.toOwnedSlice();
+            const dir = try std.fs.cwd().openDir(directory, .{});
+            const file2 = try dir.openFile(tex_path, .{});
+            std.debug.print("file2 : {any}\n", .{file2});
+
+            var reader2 = file2.reader();
+            const t_text = try reader2.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
+            // defer allocator.free(t_text);
+
+            const texture = try Texture.create(t_text);
             materials_array.items[current_mtl].diffuse_texture = texture;
         } else if (std.mem.eql(u8, m_line_header, "map_Ks")) {
             // specular colour texture map

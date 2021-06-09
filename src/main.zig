@@ -76,7 +76,7 @@ fn init() bool {
         panic("unable to create window\n", .{});
     };
 
-    // c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_DISABLED);  
+    c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_DISABLED);  
 
     _ = c.glfwSetKeyCallback(window, key_callback);
     _ = c.glfwSetCursorPosCallback(window, mouse_callback);
@@ -112,8 +112,8 @@ pub fn main() !void {
     const teddy_shader = try r.ShaderProgram.create_from_file("shaders/teddy.vert", "shaders/teddy.frag");
     
     // ---- textures
-    const diffuse = try r.Texture.create("assets/backpack/diffuse.png");
-    const specular = try r.Texture.create("assets/container2_specular.png");
+    // const diffuse = try r.Texture.create("assets/backpack/diffuse.png");
+    // const specular = try r.Texture.create("assets/container2_specular.png");
 
     
 
@@ -197,9 +197,9 @@ pub fn main() !void {
         // render a teddy
         c.glUseProgram(teddy_shader.program_id);
 
-        c.glActiveTexture(c.GL_TEXTURE0);
-        c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "texture1"), 0); 
-        c.glBindTexture(c.GL_TEXTURE_2D, diffuse.texture_id);
+        // c.glActiveTexture(c.GL_TEXTURE0);
+        // c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "texture1"), 0); 
+        // c.glBindTexture(c.GL_TEXTURE_2D, diffuse.texture_id);
 
         model = mat4.identity();
         // model = model.scale(vec3.new(0.7, 0.7, 0.7));

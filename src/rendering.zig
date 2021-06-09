@@ -55,17 +55,17 @@ pub const Texture = struct {
     texture_id: u32,
     loaded: bool,
 
-    pub fn create(file_path: []const u8) !Texture {
+    pub fn create(text: []const u8) !Texture {
         var tex: Texture = undefined;
         const alloc = c_allocator; // TODO: CHANGE
 
-        const file = try std.fs.cwd().openFile(file_path, .{});
-        defer file.close();
+        // const file = try std.fs.cwd().openFile(file_path, .{});
+        // defer file.close();
 
-        const buffer = try file.reader().readAllAlloc(alloc, 1000000000); // TODO: take an allocator in. change max texture buffer size
-        defer alloc.free(buffer);
+        // const buffer = try file.reader().readAllAlloc(alloc, 1000000000); // TODO: take an allocator in. change max texture buffer size
+        // defer alloc.free(buffer);
 
-        var png = try PngImage.create(buffer);
+        var png = try PngImage.create(text);
 
         c.glGenTextures(1, &tex.texture_id);
         c.glBindTexture(c.GL_TEXTURE_2D, tex.texture_id);
