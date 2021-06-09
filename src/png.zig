@@ -34,7 +34,7 @@ pub const PngImage = struct {
         const bits_per_channel = 8;
         const channel_count = 4;
 
-        c.stbi_set_flip_vertically_on_load(1);
+        // c.stbi_set_flip_vertically_on_load(1);
         const image_data = c.stbi_load_from_memory(compressed_bytes.ptr, @intCast(c_int, compressed_bytes.len), &width, &height, null, channel_count);
 
         if (image_data == null) return error.NoMem;

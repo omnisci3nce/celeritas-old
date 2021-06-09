@@ -7,10 +7,7 @@ const SplitIterator = std.mem.SplitIterator;
 const Mesh = @import("../rendering.zig").Mesh;
 const Model = @import("../rendering.zig").Model;
 const Material = @import("../rendering.zig").Material;
-
-const Position = struct {
-
-};
+const Texture = @import("../rendering.zig").Texture;
 
 const FaceElement = struct {
     position_idx: u32,
@@ -98,16 +95,17 @@ pub fn load_obj(file_path: []const u8) !Model {
         } else if (std.mem.eql(u8, line_header, "o")) {
             // first 'o' doesnt create an object
             if (!first_object) {
-                const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_faces, position_offset, face_offset);
+                const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_texcoords, &tmp_faces, position_offset, face_offset);
                 try tmp_meshes.append(mesh);
-                std.debug.print("Submesh {s} stats: {d} vertices - {d} normals - {d} faces \n", .{
-                    object_name_b,
-                    tmp_positions.items.len - position_offset,
-                    tmp_normals.items.len - normal_offset,
-                    tmp_faces.items.len - face_offset
-                });
+                // std.debug.print("Submesh {s} stats: {d} vertices - {d} normals - {d} faces \n", .{
+                //     object_name_b,
+                //     tmp_positions.items.len - position_offset,
+                //     tmp_normals.items.len - normal_offset,
+                //     tmp_faces.items.len - face_offset
+                // });
                 position_offset = tmp_positions.items.len;
                 normal_offset = tmp_normals.items.len;
+                texcoord_offset = tmp_texcoords.items.len;
                 face_offset = tmp_faces.items.len;
             }
             first_object = false;
@@ -121,14 +119,15 @@ pub fn load_obj(file_path: []const u8) !Model {
 
     // last mesh or if one wasnt created
     if (tmp_positions.items.len > 0 and tmp_faces.items.len != face_offset) {
-        const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_faces, position_offset, face_offset);
+        const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_texcoords, &tmp_faces, position_offset, face_offset);
         try tmp_meshes.append(mesh);
     }
 
-    std.debug.print("Num sub-meshes: {d}\n", .{tmp_meshes.items.len});
+    // std.debug.print("Num sub-meshes: {d}\n", .{tmp_meshes.items.len});
 
     return Model{
         .meshes = tmp_meshes.toOwnedSlice(),
+        .materials = tmp_materials.toOwnedSlice(),
         .use_gamma_correction = false
     };
 }
@@ -153,7 +152,11 @@ fn parse_normal(normal_array: *std.ArrayList(vec3), line: []const u8) !void {
 }
 
 fn parse_texture_coords (tex_coords_array: *std.ArrayList(vec2), line: []const u8) !void {
-    // TODO
+    var line_items = std.mem.split(line, " ");
+    _ = line_items.next(); // skip line header
+    const x = try std.fmt.parseFloat(f32, line_items.next().?);
+    const y = try std.fmt.parseFloat(f32, line_items.next().?);
+    try tex_coords_array.append(vec2.new(x, y));
 }
 
 fn parse_face(elements_array: *std.ArrayList(FaceElement), line: []const u8) !void {
@@ -189,6 +192,7 @@ fn parse_object(line: []const u8) ![]const u8 {
 fn create_submesh(
     tmp_positions: *std.ArrayList(vec3),
     tmp_normals:   *std.ArrayList(vec3),
+    tmp_texcoords: *std.ArrayList(vec2),
     tmp_faces:     *std.ArrayList(FaceElement),
     position_offset: usize,
     face_offset: usize
@@ -206,15 +210,22 @@ fn create_submesh(
         const v = face.position_idx;
         const pos = tmp_positions.items[face.position_idx];
         const norm = if (face.normal_idx == 0) vec3.zero() else tmp_normals.items[face.normal_idx];
+        const tex = if (face.texture_idx == 0) vec2.zero() else tmp_texcoords.items[face.texture_idx];
+        // std.debug.print("tex: {d} {d}\n", .{tex.x, tex.y});
         const relative_pos_i = v - position_offset;
         // std.debug.print("{any}\n", .{relative_pos_i});
         vertices_buffer[relative_pos_i * 8] = pos.x;
         vertices_buffer[relative_pos_i * 8 + 1] = pos.y;
         vertices_buffer[relative_pos_i * 8 + 2] = pos.z;
+        vertices_buffer[relative_pos_i * 8 + 3] = norm.x;
+        vertices_buffer[relative_pos_i * 8 + 4] = norm.y;
+        vertices_buffer[relative_pos_i * 8 + 5] = norm.z;
+        vertices_buffer[relative_pos_i * 8 + 6] = tex.x;
+        vertices_buffer[relative_pos_i * 8 + 7] = tex.y;
 
         indices_buffer[i] = @intCast(u32, relative_pos_i);
 
-        i+= 1;
+        i += 1;
     }
 
     return Mesh.create(
@@ -237,6 +248,14 @@ fn parse_float3(line: []const u8) !vec3 {
     return vec3.new(x, y, z);
 }
 
+fn parse_str1(line: []const u8) ![]const u8 {
+    var line_items = std.mem.split(line, " ");
+    _ = line_items.next(); // skip line header
+    var str = line_items.next().?;
+
+    return str;
+}
+
 pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []const u8) !void {
     std.debug.print("BEGIN load material lib\n", .{});
     var line_items = std.mem.split(line, " ");
@@ -246,6 +265,8 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
     // load the file
     const file = try std.fs.cwd().openFile("assets/backpack/backpack.mtl", .{}); // TODO: dont hardcode path xD
     defer file.close();
+
+    std.debug.print("backpack.mtl found\n", .{});
 
     const reader = file.reader();
     const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
@@ -271,16 +292,20 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
 
         } else if (std.mem.eql(u8, m_line_header, "Ka")) {
             // Ambient colour
+            const colour = try parse_float3(m_line);
+            materials_array.items[current_mtl].ambient_colour = colour;
         } else if (std.mem.eql(u8, m_line_header, "Kd")) {
             // Diffuse colour
             const colour = try parse_float3(m_line);
-            // try materials_array.items[current_mtl];
+            materials_array.items[current_mtl].diffuse_colour = colour;
         } else if (std.mem.eql(u8, m_line_header, "Ks")) {
             // Specular colour
+            const colour = try parse_float3(m_line);
+            materials_array.items[current_mtl].specular_colour = colour;
         } else if (std.mem.eql(u8, m_line_header, "Ns")) {
             // Specular exponent
             const ns = try std.fmt.parseFloat(f32, m_line_items.next().?);
-            materials_array.items[current_mtl].specular_strength = ns;
+            materials_array.items[current_mtl].specular_exponent = ns;
         } else if (std.mem.eql(u8, m_line_header, "d")) {
             // 'dissolved' - transparency 1.0 = opaque
         } else if (std.mem.eql(u8, m_line_header, "Ni")) {
@@ -289,6 +314,10 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
             // ambient texture map    
         } else if (std.mem.eql(u8, m_line_header, "map_Kd")) {
             // diffuse texture map
+            // TODO
+            const tex_path = try parse_str1(line);
+            const texture = try Texture.create("assets/backpack/diffuse.png");
+            materials_array.items[current_mtl].diffuse_texture = texture;
         } else if (std.mem.eql(u8, m_line_header, "map_Ks")) {
             // specular colour texture map
         } else if (std.mem.eql(u8, m_line_header, "map_Ns")) {
@@ -300,7 +329,7 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
         }
     }
 
-    if (!materials_array.items.len > 0) {
+    if (!(materials_array.items.len > 0)) {
         return error.ContainsNoMaterials;
     }
 

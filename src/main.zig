@@ -104,6 +104,7 @@ pub fn main() !void {
 
     // ---- meshes
     const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
+    std.debug.print("Num materials: {d}\n", .{asset_model.meshes.len});
 
     // ---- shaders    
     const obj_shader = try r.ShaderProgram.create_from_file("shaders/lit_object.vert", "shaders/lit_object.frag");
@@ -111,8 +112,10 @@ pub fn main() !void {
     const teddy_shader = try r.ShaderProgram.create_from_file("shaders/teddy.vert", "shaders/teddy.frag");
     
     // ---- textures
-    const diffuse = try r.Texture.create("assets/container2.png");
+    const diffuse = try r.Texture.create("assets/backpack/diffuse.png");
     const specular = try r.Texture.create("assets/container2_specular.png");
+
+    
 
     // ---- setup vertex data and attributes
     var VBO: u32 = undefined; // vertex buffer object - send vertex data to vram
@@ -175,7 +178,7 @@ pub fn main() !void {
         c.glClear(c.GL_COLOR_BUFFER_BIT);
         c.glClear(c.GL_DEPTH_BUFFER_BIT);
 
-        c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
+        // c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
 
         // view/projection transformations
         const projection = mat4.perspective(45.0, (@intToFloat(f32,width) / @intToFloat(f32, height)), 0.1, 100.0);
@@ -193,14 +196,23 @@ pub fn main() !void {
 
         // render a teddy
         c.glUseProgram(teddy_shader.program_id);
+
+        c.glActiveTexture(c.GL_TEXTURE0);
+        c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "texture1"), 0); 
+        c.glBindTexture(c.GL_TEXTURE_2D, diffuse.texture_id);
+
         model = mat4.identity();
-        model = model.scale(vec3.new(0.7, 0.7, 0.7));
-        // model = model.translate(vec3.new(1.0, 1.0, 4.0));
+        // model = model.scale(vec3.new(0.7, 0.7, 0.7));
+        model = model.translate(vec3.new(0.0, 0.0, 0.0));
         teddy_shader.setMat4("model", model);
         teddy_shader.setMat4("view", view);
         teddy_shader.setMat4("projection", projection);
         // asset_model.meshes[mesh_index].draw();
+
+
         asset_model.draw();
+
+        // c.glActiveTexture(c.GL_TEXTURE0);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         c.glfwSwapBuffers(window);

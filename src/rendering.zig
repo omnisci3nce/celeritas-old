@@ -33,7 +33,22 @@ pub const Material = struct {
     diffuse_colour: vec3       = vec3.zero(),
     specular_colour: vec3      = vec3.zero(),
     specular_exponent: f32     = 32.0,
-    transparency: f32          = 1.0
+    transparency: f32          = 1.0,
+
+    pub fn print (m: Material) void { // debug print
+        std.debug.print(
+            \\ Material:
+            \\  name: {s}
+            \\  ambient colour: {any}
+            \\  diffuse colour: {any}
+            \\  specular colour: {any}
+            \\  specular strength: {d}
+            \\
+        , .{m.name, m.ambient_colour, m.diffuse_colour, m.specular_colour, m.specular_exponent});
+        if (m.diffuse_texture) |dtm| {
+            std.debug.print("  diffuse texture map: {any} - {any}\n", .{ dtm.texture_id, dtm.loaded});
+        }
+    }
 };
 
 pub const Texture = struct {
@@ -47,7 +62,7 @@ pub const Texture = struct {
         const file = try std.fs.cwd().openFile(file_path, .{});
         defer file.close();
 
-        const buffer = try file.reader().readAllAlloc(alloc, 1000000); // TODO: take an allocator in. change max texture buffer size
+        const buffer = try file.reader().readAllAlloc(alloc, 1000000000); // TODO: take an allocator in. change max texture buffer size
         defer alloc.free(buffer);
 
         var png = try PngImage.create(buffer);
@@ -56,7 +71,7 @@ pub const Texture = struct {
         c.glBindTexture(c.GL_TEXTURE_2D, tex.texture_id);
         c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_S, c.GL_REPEAT);
         c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_WRAP_T, c.GL_REPEAT);
-        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MIN_FILTER, c.GL_LINEAR);
+        c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MIN_FILTER, c.GL_LINEAR_MIPMAP_LINEAR);
         c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_LINEAR);
 
         // actually load the texture
@@ -72,6 +87,10 @@ pub const Texture = struct {
             @ptrCast(*c_void, &png.raw[0]),
         );
         c.glGenerateMipmap(c.GL_TEXTURE_2D);
+
+        tex.loaded = true;
+
+        std.debug.print("Created Texture: {d}\n", .{tex.texture_id});
 
         return tex;
     }
@@ -95,7 +114,7 @@ pub const Mesh = struct {
         // upload vertex data
         c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
         c.glBufferData(c.GL_ARRAY_BUFFER, @intCast(c_long, vertices.len * @sizeOf(c.GLfloat)), vertices.ptr, c.GL_STATIC_DRAW);
-        std.debug.print("vertices = {any}\n", .{vertices.len / 8}); // 8 floats per geometry vertex
+        // std.debug.print("vertices = {any}\n", .{vertices.len / 8}); // 8 floats per geometry vertex
         // std.debug.print("vertices array {any}\n", .{vertices});
         // std.debug.print("indices array {any}\n", .{indices});
         // generate VAO - vertex attribute object
@@ -118,10 +137,10 @@ pub const Mesh = struct {
             // upload index data
             c.glBindBuffer(c.GL_ELEMENT_ARRAY_BUFFER, EBO);
             c.glBufferData(c.GL_ELEMENT_ARRAY_BUFFER, @intCast(c_long, _indices.len * @sizeOf(c.GLuint)), _indices.ptr, c.GL_STATIC_DRAW);
-            std.debug.print("triangles = {any}\n", .{_indices.len / 3}); // 3 indices per triangle
+            // std.debug.print("triangles = {any}\n", .{_indices.len / 3}); // 3 indices per triangle
         }
 
-        std.debug.print("Mesh created.\n", .{});
+        // std.debug.print("Mesh created.\n", .{});
 
         return Mesh{
             .vbo = VBO,
@@ -144,7 +163,7 @@ pub const Mesh = struct {
 
 pub const Model = struct {
     meshes: []Mesh,
-    // materials
+    materials: []Material,
     use_gamma_correction: bool,
 
     pub fn draw(m: Model) void {
