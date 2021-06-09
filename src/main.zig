@@ -187,12 +187,9 @@ pub fn main() !void {
         // render a cube
         c.glUseProgram(teddy_shader.program_id);
         var model = mat4.identity();
-        // model = model.scale(cube1.scale); 
-        // model = model.translate(cube1.translation);
         teddy_shader.setMat4("model", model);
         teddy_shader.setMat4("view", view);
         teddy_shader.setMat4("projection", projection);
-        // cube1.draw(&stats);
 
         // render a teddy
         c.glUseProgram(teddy_shader.program_id);
@@ -202,7 +199,7 @@ pub fn main() !void {
         // c.glBindTexture(c.GL_TEXTURE_2D, diffuse.texture_id);
 
         model = mat4.identity();
-        // model = model.scale(vec3.new(0.7, 0.7, 0.7));
+        model = model.scale(vec3.new(0.7, 0.7, 0.7));
         model = model.translate(vec3.new(0.0, 0.0, 0.0));
         teddy_shader.setMat4("model", model);
         teddy_shader.setMat4("view", view);

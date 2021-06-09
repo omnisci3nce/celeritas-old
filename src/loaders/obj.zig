@@ -269,12 +269,10 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
     _ = line_items.next(); // skip line header
     var path = line_items.next().?;
 
-    // load the file
-    // const dir = try std.fs.openDirAbsolute(directory, .{});
-    // const file = try dir.openFile("assets/911.mtl", .{}); // TODO: dont hardcode path xD
-    // defer file.close();
+    std.debug.print("directory: {s} path: {s}\n", .{directory, path});
 
-    const file = try std.fs.cwd().openFile("assets/backpack/backpack.mtl", .{}); // TODO: dont hardcode path xD
+    const dir = try std.fs.cwd().openDir(directory, .{});
+    const file = try dir.openFile(path, .{}); 
     defer file.close();
 
     std.debug.print("backpack.mtl found\n", .{});
@@ -295,7 +293,6 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
             const name = m_line_items.next().?;
             const new_mtl = Material{ .name = name };
             try materials_array.append(new_mtl);
-            // std.debug.print("newmtl {s}\n", .{ materials_array.items[current_mtl].name });
 
             if (materials_array.items.len > 1) {
                 current_mtl += 1; // only increment after first material has been set
@@ -324,31 +321,24 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
         } else if (std.mem.eql(u8, m_line_header, "map_Ka")) {
             // ambient texture map    
         } else if (std.mem.eql(u8, m_line_header, "map_Kd")) {
-            // diffuse texture map
-            // TODO
             const tex_path = try parse_str1(m_line);
-
-            // concatenate directory path with texture 
-            // const full = directory + tex_path;
-
-            // const buffer = std.ArrayList([]const u8).init(allocator);
-            // // std.debug.print("path: {s}\n", .{directory});
-            // try buffer.append(directory);
-            // try buffer.append(tex_path);
 
             std.debug.print("tex path: {s}\n", .{tex_path});
 
-            // const final = buffer.toOwnedSlice();
-            const dir = try std.fs.cwd().openDir(directory, .{});
-            const file2 = try dir.openFile(tex_path, .{});
+            // TODO: cleanup variable names
+            const dir2 = try std.fs.cwd().openDir(directory, .{});
+            const file2 = try dir2.openFile(tex_path, .{});
             std.debug.print("file2 : {any}\n", .{file2});
 
             var reader2 = file2.reader();
             const t_text = try reader2.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
-            // defer allocator.free(t_text);
 
             const texture = try Texture.create(t_text);
             materials_array.items[current_mtl].diffuse_texture = texture;
+
+
+            file2.close();
+            allocator.free(t_text);
         } else if (std.mem.eql(u8, m_line_header, "map_Ks")) {
             // specular colour texture map
         } else if (std.mem.eql(u8, m_line_header, "map_Ns")) {
