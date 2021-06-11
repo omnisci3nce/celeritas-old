@@ -97,47 +97,24 @@ pub fn main() !void {
 
     var initialised = init();
     var stats = engine.FrameStats{
-        .draw_calls = 0,
+        .drawcall_count = 0,
+        .shader_switch_count = 0,
         .triangle_count = 0,
         .frame_time = 0
     };
 
     // ---- meshes
-    const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
-    std.debug.print("Num materials: {d}\n", .{asset_model.meshes.len});
+    // const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
+    // std.debug.print("Num materials: {d}\n", .{asset_model.meshes.len});
 
     // ---- shaders    
-    const teddy_shader = try r.ShaderProgram.create_from_file("shaders/teddy.vert", "shaders/lamp.frag");
+    const teddy_shader = try r.ShaderProgram.create_from_file("shaders/teddy.vert", "shaders/debug.frag");
     
     // ---- textures
     // const diffuse = try r.Texture.create("assets/backpack/diffuse.png");
     // const specular = try r.Texture.create("assets/backpack/specular.png");
 
-    
-
-    // ---- setup vertex data and attributes
-    var VBO: u32 = undefined; // vertex buffer object - send vertex data to vram
-    var VBO2: u32 = undefined;
-    var objectVAO: u32 = undefined;
-    var lightVAO: u32 = undefined;
-
-    // const cube1 = try Cube.create(teddy_shader);
-
-    // TODO: move to one time setup to a separate function
-    c.glGenVertexArrays(1, &objectVAO);
-    c.glGenBuffers(1, &VBO);
-    // ---- Object VAO
-    c.glBindBuffer(c.GL_ARRAY_BUFFER, VBO);
-    c.glBufferData(c.GL_ARRAY_BUFFER, cube_vertices.len * @sizeOf(c.GLfloat), @ptrCast(*const c_void, &cube_vertices[0]), c.GL_STATIC_DRAW);
-    c.glBindVertexArray(objectVAO);
-    c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), null); // position
-    c.glEnableVertexAttribArray(0);
-    const normal_offset = @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat));
-    c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), normal_offset);
-    c.glEnableVertexAttribArray(1);
-    const tex_offset = @intToPtr(*const c_void, 6 * @sizeOf(c.GLfloat));
-    c.glVertexAttribPointer(2, 2, c.GL_FLOAT, c.GL_FALSE, 8 * @sizeOf(c.GLfloat), tex_offset); // texture coord
-    c.glEnableVertexAttribArray(2);
+    const cube = try Cube.create(teddy_shader);
 
 
     var nbFrames: i32 = 0;
@@ -146,7 +123,7 @@ pub fn main() !void {
     var mesh_index: usize = 0;
     // ---- Render loop
     while (c.glfwWindowShouldClose(window) == c.GL_FALSE) {
-        stats.draw_calls = 0; // reset frame stats
+        stats.drawcall_count = 0; // reset frame stats
 
         // camera
         var direction = vec3.new(0.0, 0.0, 0.0);
@@ -176,20 +153,32 @@ pub fn main() !void {
         c.glClear(c.GL_COLOR_BUFFER_BIT);
         c.glClear(c.GL_DEPTH_BUFFER_BIT);
 
-        // c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
+        c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
 
         // view/projection transformations
         const projection = mat4.perspective(45.0, (@intToFloat(f32,width) / @intToFloat(f32, height)), 0.1, 100.0);
         const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
 
-        // render a cube
+        // render cubes
         c.glUseProgram(teddy_shader.program_id);
-        var model = mat4.identity();
-        teddy_shader.setMat4("model", model);
         teddy_shader.setMat4("view", view);
         teddy_shader.setMat4("projection", projection);
 
-        // render a teddy
+        // floor
+        var model = mat4.identity().scale(vec3.new(8.0, 1.0, 8.0)).translate(vec3.new(1.0, -2.0, -4.0));
+        teddy_shader.setMat4("model", model);
+        cube.draw(&stats);
+
+        // middle cube
+        model = mat4.identity().translate(vec3.new(1.0, -1.0, -4.0));
+        teddy_shader.setMat4("model", model);
+        cube.draw(&stats);
+
+        // wall cube
+        model = mat4.identity().scale(vec3.new(5.0, 3.0, 1.0)).translate(vec3.new(1.0, 0.0, -8.5));
+        teddy_shader.setMat4("model", model);
+        cube.draw(&stats);
+
         c.glUseProgram(teddy_shader.program_id);
 
         // teddy_shader.setVec3("light.position", camera.pos.x, camera.pos.y, camera.pos.z);
@@ -215,28 +204,27 @@ pub fn main() !void {
         // c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "material.specular"), 1); 
         // c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].specular_texture.?.texture_id);
 
-        c.glActiveTexture(c.GL_TEXTURE0);
-        c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "texture1"), 0); 
-        c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].specular_texture.?.texture_id);
+        // c.glActiveTexture(c.GL_TEXTURE0);
+        // c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "texture1"), 0); 
+        // c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].specular_texture.?.texture_id);
 
 
 
-        model = mat4.identity();
-        model = model.scale(vec3.new(0.7, 0.7, 0.7));
-        model = model.translate(vec3.new(0.0, 0.0, 0.0));
-        teddy_shader.setMat4("model", model);
-        teddy_shader.setMat4("view", view);
-        teddy_shader.setMat4("projection", projection);
+        // model = mat4.identity();
+        // model = model.scale(vec3.new(0.7, 0.7, 0.7));
+        // model = model.translate(vec3.new(0.0, 0.0, 0.0));
+        // teddy_shader.setMat4("model", model);
+        // teddy_shader.setMat4("view", view);
+        // teddy_shader.setMat4("projection", projection);
 
-        asset_model.draw();
+        // asset_model.draw();
 
-        c.glActiveTexture(c.GL_TEXTURE0);
+        // stats.print_drawcalls();
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         c.glfwSwapBuffers(window);
         c.glfwPollEvents();
     }
-
 }
 
 fn process_input(win: ?*c.GLFWwindow) void {

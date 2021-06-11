@@ -281,7 +281,7 @@ pub const Cube = struct {
     pub fn draw(cube: Cube, s: *FrameStats) void {
         c.glBindVertexArray(cube.mesh.vao);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 36); // cubes have 36 vertices
-        s.draw_calls += 1;
+        s.drawcall_count += 1;
     }
 
     // TODO: pub fn destroy() void {}
