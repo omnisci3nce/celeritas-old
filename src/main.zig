@@ -179,6 +179,16 @@ pub fn main() !void {
         teddy_shader.setMat4("model", model);
         cube.draw(&stats);
 
+        // wall cube 2
+        model = mat4.identity();
+        model = model.scale(vec3.new(1.0, 3.0, 4.0));
+        model = model.rotate(0, vec3.new(1.0, 0.0, 0.0));
+        model = model.rotate(90, vec3.new(0.0, 1.0, 0.0));
+        model = model.rotate(0, vec3.new(0.0, 0.0, 1.0));
+        model = model.translate(vec3.new(4.0, 0.0, -6.0));
+        teddy_shader.setMat4("model", model);
+        cube.draw(&stats);
+
         c.glUseProgram(teddy_shader.program_id);
 
         // teddy_shader.setVec3("light.position", camera.pos.x, camera.pos.y, camera.pos.z);
