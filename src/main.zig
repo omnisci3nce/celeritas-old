@@ -107,13 +107,11 @@ pub fn main() !void {
     std.debug.print("Num materials: {d}\n", .{asset_model.meshes.len});
 
     // ---- shaders    
-    const obj_shader = try r.ShaderProgram.create_from_file("shaders/lit_object.vert", "shaders/lit_object.frag");
-    const light_shader = try r.ShaderProgram.create_from_file("shaders/lamp.vert", "shaders/lamp.frag");
-    const teddy_shader = try r.ShaderProgram.create_from_file("shaders/teddy.vert", "shaders/teddy.frag");
+    const teddy_shader = try r.ShaderProgram.create_from_file("shaders/teddy.vert", "shaders/lamp.frag");
     
     // ---- textures
     // const diffuse = try r.Texture.create("assets/backpack/diffuse.png");
-    // const specular = try r.Texture.create("assets/container2_specular.png");
+    // const specular = try r.Texture.create("assets/backpack/specular.png");
 
     
 
@@ -194,9 +192,34 @@ pub fn main() !void {
         // render a teddy
         c.glUseProgram(teddy_shader.program_id);
 
+        // teddy_shader.setVec3("light.position", camera.pos.x, camera.pos.y, camera.pos.z);
+        // teddy_shader.setVec3("light.direction", camera.front.x, camera.front.y, camera.front.z);
+        // teddy_shader.setFloat("light.cutOff", 0.95);
+        // teddy_shader.setFloat("light.outerCutOff", 1.5);
+        // teddy_shader.setVec3("viewPos", camera.pos.x, camera.pos.y, camera.pos.z);
+
+        // teddy_shader.setVec3("light.ambient", 0.1, 0.1, 0.1);
+        // teddy_shader.setVec3("light.diffuse", 0.8, 0.8, 0.8);
+        // teddy_shader.setVec3("light.specular", 1.0, 1.0, 1.0);
+        // teddy_shader.setFloat("light.constant", 1.0);
+        // teddy_shader.setFloat("light.linear", 0.09);
+        // teddy_shader.setFloat("light.quadratic", 0.032);
+
+        // teddy_shader.setFloat("material.shininess", 32.0);
+
         // c.glActiveTexture(c.GL_TEXTURE0);
-        // c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "texture1"), 0); 
-        // c.glBindTexture(c.GL_TEXTURE_2D, diffuse.texture_id);
+        // c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "material.diffuse"), 0); 
+        // c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].diffuse_texture.?.texture_id);
+
+        // c.glActiveTexture(c.GL_TEXTURE1);
+        // c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "material.specular"), 1); 
+        // c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].specular_texture.?.texture_id);
+
+        c.glActiveTexture(c.GL_TEXTURE0);
+        c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "texture1"), 0); 
+        c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].specular_texture.?.texture_id);
+
+
 
         model = mat4.identity();
         model = model.scale(vec3.new(0.7, 0.7, 0.7));
@@ -204,12 +227,10 @@ pub fn main() !void {
         teddy_shader.setMat4("model", model);
         teddy_shader.setMat4("view", view);
         teddy_shader.setMat4("projection", projection);
-        // asset_model.meshes[mesh_index].draw();
-
 
         asset_model.draw();
 
-        // c.glActiveTexture(c.GL_TEXTURE0);
+        c.glActiveTexture(c.GL_TEXTURE0);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         c.glfwSwapBuffers(window);

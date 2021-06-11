@@ -321,6 +321,7 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
         } else if (std.mem.eql(u8, m_line_header, "map_Ka")) {
             // ambient texture map    
         } else if (std.mem.eql(u8, m_line_header, "map_Kd")) {
+            // diffuse texture map
             const tex_path = try parse_str1(m_line);
 
             std.debug.print("tex path: {s}\n", .{tex_path});
@@ -336,11 +337,22 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
             const texture = try Texture.create(t_text);
             materials_array.items[current_mtl].diffuse_texture = texture;
 
-
             file2.close();
             allocator.free(t_text);
         } else if (std.mem.eql(u8, m_line_header, "map_Ks")) {
             // specular colour texture map
+            const tex_path = try parse_str1(m_line);
+            const dir2 = try std.fs.cwd().openDir(directory, .{});
+            const file2 = try dir2.openFile(tex_path, .{});
+            var reader2 = file2.reader();
+            const t_text = try reader2.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
+            const texture = try Texture.create(t_text);
+            materials_array.items[current_mtl].specular_texture = texture;
+            file2.close();
+            allocator.free(t_text);
+
+            std.debug.print("Loaded specular map\n", .{});
+
         } else if (std.mem.eql(u8, m_line_header, "map_Ns")) {
             // specular highlight component
         } else if (std.mem.eql(u8, m_line_header, "map_bump") or std.mem.eql(u8, m_line_header, "map_Bump")) {
