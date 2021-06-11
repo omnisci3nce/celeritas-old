@@ -107,15 +107,33 @@ pub fn main() !void {
     // const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
     // std.debug.print("Num materials: {d}\n", .{asset_model.meshes.len});
 
+    var container_file = try std.fs.cwd().openFile("assets/container2.png", .{});
+    defer container_file.close();
+    
+    const container_src = try container_file.reader().readAllAlloc(
+        c_allocator,
+        100000000,
+    );
+    defer c_allocator.free(container_src);
+
+    var container_file2 = try std.fs.cwd().openFile("assets/container2_specular.png", .{});
+    defer container_file2.close();
+    
+    const container_src2 = try container_file2.reader().readAllAlloc(
+        c_allocator,
+        100000000,
+    );
+    defer c_allocator.free(container_src2);
+
     // ---- shaders    
-    const teddy_shader = try r.ShaderProgram.create_from_file("shaders/teddy.vert", "shaders/debug.frag");
+    const lighting_shader = try r.ShaderProgram.create_from_file("shaders/basic_lighting.vert", "shaders/basic_lighting.frag");
+    const light_cube_shader = try r.ShaderProgram.create_from_file("shaders/light_cube.vert", "shaders/light_cube.frag");
     
     // ---- textures
-    // const diffuse = try r.Texture.create("assets/backpack/diffuse.png");
-    // const specular = try r.Texture.create("assets/backpack/specular.png");
+    var diffuse = try r.Texture.create(container_src);
+    var specular = try r.Texture.create(container_src2);
 
-    const cube = try Cube.create(teddy_shader);
-
+    const cube = try Cube.create(light_cube_shader);
 
     var nbFrames: i32 = 0;
     var last_time: f32 = 0.0;
@@ -153,30 +171,55 @@ pub fn main() !void {
         c.glClear(c.GL_COLOR_BUFFER_BIT);
         c.glClear(c.GL_DEPTH_BUFFER_BIT);
 
-        c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
+        // c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
 
         // view/projection transformations
         const projection = mat4.perspective(45.0, (@intToFloat(f32,width) / @intToFloat(f32, height)), 0.1, 100.0);
         const view = mat4.look_at(camera.pos, vec3.add(camera.pos, camera.front), camera.up);
 
         // render cubes
-        c.glUseProgram(teddy_shader.program_id);
-        teddy_shader.setMat4("view", view);
-        teddy_shader.setMat4("projection", projection);
+        c.glUseProgram(lighting_shader.program_id);
+        lighting_shader.setMat4("view", view);
+        lighting_shader.setMat4("projection", projection);
+
+        lighting_shader.setVec3("viewPos", camera.pos.x, camera.pos.y, camera.pos.z);
+        lighting_shader.setFloat("material.shininess", 32.0);
+
+        // directional light - "sun"
+        lighting_shader.setVec3("dirLight.direction", 0.3, -1.0, 0.0);
+        lighting_shader.setVec3("dirLight.ambient", 0.2, 0.2, 0.2);
+        lighting_shader.setVec3("dirLight.diffuse", 0.6, 0.6, 0.6);
+        lighting_shader.setVec3("dirLight.specular", 0.5, 0.5, 0.5);
+        // point light 1
+        lighting_shader.setVec3("pointLights[0].position", 1.0, 1.0, -4.0);
+        lighting_shader.setVec3("pointLights[0].ambient", 0.05, 0.05, 0.05);
+        lighting_shader.setVec3("pointLights[0].diffuse", 0.8, 0.8, 0.8);
+        lighting_shader.setVec3("pointLights[0].specular", 1.0, 1.0, 1.0);
+        lighting_shader.setFloat("pointLights[0].constant", 1.0);
+        lighting_shader.setFloat("pointLights[0].linear", 0.09);
+        lighting_shader.setFloat("pointLights[0].quadratic", 0.032);
+
+        // bind diffuse map
+        c.glActiveTexture(c.GL_TEXTURE0);
+        c.glUniform1i(c.glGetUniformLocation(lighting_shader.program_id, "material.diffuse"), 0); 
+        c.glBindTexture(c.GL_TEXTURE_2D, diffuse.texture_id);
+        c.glActiveTexture(c.GL_TEXTURE1);
+        c.glUniform1i(c.glGetUniformLocation(lighting_shader.program_id, "material.specular"), 1); 
+        c.glBindTexture(c.GL_TEXTURE_2D, specular.texture_id);
 
         // floor
         var model = mat4.identity().scale(vec3.new(8.0, 1.0, 8.0)).translate(vec3.new(1.0, -2.0, -4.0));
-        teddy_shader.setMat4("model", model);
+        lighting_shader.setMat4("model", model);
         cube.draw(&stats);
 
         // middle cube
         model = mat4.identity().translate(vec3.new(1.0, -1.0, -4.0));
-        teddy_shader.setMat4("model", model);
+        lighting_shader.setMat4("model", model);
         cube.draw(&stats);
 
         // wall cube
         model = mat4.identity().scale(vec3.new(5.0, 3.0, 1.0)).translate(vec3.new(1.0, 0.0, -8.5));
-        teddy_shader.setMat4("model", model);
+        lighting_shader.setMat4("model", model);
         cube.draw(&stats);
 
         // wall cube 2
@@ -186,25 +229,17 @@ pub fn main() !void {
         model = model.rotate(90, vec3.new(0.0, 1.0, 0.0));
         model = model.rotate(0, vec3.new(0.0, 0.0, 1.0));
         model = model.translate(vec3.new(4.0, 0.0, -6.0));
-        teddy_shader.setMat4("model", model);
+        lighting_shader.setMat4("model", model);
         cube.draw(&stats);
 
-        c.glUseProgram(teddy_shader.program_id);
-
-        // teddy_shader.setVec3("light.position", camera.pos.x, camera.pos.y, camera.pos.z);
-        // teddy_shader.setVec3("light.direction", camera.front.x, camera.front.y, camera.front.z);
-        // teddy_shader.setFloat("light.cutOff", 0.95);
-        // teddy_shader.setFloat("light.outerCutOff", 1.5);
-        // teddy_shader.setVec3("viewPos", camera.pos.x, camera.pos.y, camera.pos.z);
-
-        // teddy_shader.setVec3("light.ambient", 0.1, 0.1, 0.1);
-        // teddy_shader.setVec3("light.diffuse", 0.8, 0.8, 0.8);
-        // teddy_shader.setVec3("light.specular", 1.0, 1.0, 1.0);
-        // teddy_shader.setFloat("light.constant", 1.0);
-        // teddy_shader.setFloat("light.linear", 0.09);
-        // teddy_shader.setFloat("light.quadratic", 0.032);
-
-        // teddy_shader.setFloat("material.shininess", 32.0);
+        c.glUseProgram(light_cube_shader.program_id);
+        model = mat4.identity();
+        model = model.scale(vec3.new(0.2, 0.2, 0.2));
+        model = model.translate(vec3.new(1.0, 1.0, -4.0));
+        light_cube_shader.setMat4("view", view);
+        light_cube_shader.setMat4("projection", projection);
+        light_cube_shader.setMat4("model", model);
+        cube.draw(&stats);
 
         // c.glActiveTexture(c.GL_TEXTURE0);
         // c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "material.diffuse"), 0); 
@@ -217,17 +252,6 @@ pub fn main() !void {
         // c.glActiveTexture(c.GL_TEXTURE0);
         // c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "texture1"), 0); 
         // c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].specular_texture.?.texture_id);
-
-
-
-        // model = mat4.identity();
-        // model = model.scale(vec3.new(0.7, 0.7, 0.7));
-        // model = model.translate(vec3.new(0.0, 0.0, 0.0));
-        // teddy_shader.setMat4("model", model);
-        // teddy_shader.setMat4("view", view);
-        // teddy_shader.setMat4("projection", projection);
-
-        // asset_model.draw();
 
         // stats.print_drawcalls();
 

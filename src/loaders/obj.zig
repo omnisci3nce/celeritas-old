@@ -398,6 +398,28 @@ test "parse_vertex - negative numbers" {
     expectEqual(vec3.is_eq(v, vec3.new(-3.0, -99.0, 1.0)), true);
 }
 
+test "parse_vertex - 4 vertices causes error (we don't handle quads yet)" {
+    const v = try parse_vertex("v 1.0 1.0 1.0 1.0");
+    // should error
+    expect(builtin.is_test);
+}
+
+test "parse_vertex - " {
+expect(builtin.is_test);
+}
+
+test "parse_face - vertex position only" {
+expect(builtin.is_test);
+}
+
+test "parse_face - vertex position and normal (no tex coords)" {
+expect(builtin.is_test);
+}
+
+test "parse_face - vertex position, normal, and tex coords" {
+expect(builtin.is_test);
+}
+
 // integrations tests
 
 // test with a cube
@@ -409,6 +431,7 @@ test "load_obj - cube" {
     // expect(model.meshes.items[0].num_indices  == 36);
     // expect(model.total_triangles == 12);
     // expect(model.materials.items.len == 0);
+    expect(builtin.is_test);
 }
 
 // test with a multi object model

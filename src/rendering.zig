@@ -24,6 +24,27 @@ pub const Camera = struct {
     }
 };
 
+pub const DirectionalLight = struct {
+    direction: vec3,
+    ambient_colour: vec3,
+    diffuse_colour: vec3,
+    specular_colour: vec3
+};
+
+pub const PointLight = struct {
+    position: vec3,
+
+    constant: f32,
+    linear: f32,
+    quadratic: f32,
+    
+    ambient_colour: vec3,
+    diffuse_colour: vec3,
+    specular_colour: vec3
+};
+
+pub const SpotLight = struct {};
+
 pub const Material = struct {
     name: []const u8,
     ambient_texture: ?Texture  = null,
