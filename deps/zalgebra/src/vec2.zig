@@ -163,7 +163,7 @@ test "zalgebra.Vec2.set" {
 }
 
 test "zalgebra.Vec2.get_angle" {
-    var _vec_0 = vec2.new(1., 0.);
+    var _vec_0 = vec2.new(1.0, 0.);
     var _vec_1 = vec2.up();
     var _vec_2 = vec2.new(-1., 0.);
     var _vec_3 = vec2.new(1., 1.);

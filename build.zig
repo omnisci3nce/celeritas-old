@@ -6,7 +6,6 @@ pub fn build(b: *Builder) void {
     // const windows = b.option(bool, "windows", "create windows build") orelse false;
 
     var exe = b.addExecutable("celeritas_demo", "src/main.zig");
-    // exe.addCSourceFile("stb_image-2.22/stb_image_impl.c", &[_][]const u8{"-std=c99"});
     exe.addCSourceFile("deps/stb_image-2.26/stb_image_impl.c", &[_][]const u8{"-std=c99"});
     exe.setBuildMode(mode);
 
@@ -16,15 +15,17 @@ pub fn build(b: *Builder) void {
     exe.addPackagePath("zalgebra", "deps/zalgebra/src/main.zig");
     exe.addIncludeDir("deps/zalgebra");
 
-    exe.addCSourceFile("src/unused/model_loader_impl.c", &[_][]const u8{"-std=c99"});
     exe.addIncludeDir("src");
+    exe.addIncludeDir("C:/ProgramData/chocolatey/lib/glfw3/tools/glfw-3.0.4.bin.WIN64/include");
+    exe.addLibPath("C:/ProgramData/chocolatey/lib/glfw3/tools/glfw-3.0.4.bin.WIN64/lib-msvc120");
 
     exe.linkSystemLibrary("c");
-    exe.addFrameworkDir("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks");
-    exe.linkFramework("OpenGL");
-    exe.linkSystemLibrary("glfw");
+    // exe.addFrameworkDir("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks");
+    // exe.linkFramework("OpenGL");
+    exe.linkSystemLibrary("glfw3");
+    
+    exe.addIncludeDir("C:/include");
     exe.linkSystemLibrary("epoxy");
-    exe.linkSystemLibrary("assimp");
     exe.install();
 
     const play = b.step("play", "Play the game");
