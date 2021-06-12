@@ -135,6 +135,38 @@ pub fn main() !void {
 
     const cube = try Cube.create(light_cube_shader);
 
+    // ---- lights
+    const sun = r.DirectionalLight{
+        .direction = vec3.new(0.3, -1.0, 0.0),
+        .ambient_colour = vec3.new(0.2, 0.2, 0.2),
+        .diffuse_colour = vec3.new(0.6, 0.6, 0.6),
+        .specular_colour = vec3.new(0.5, 0.5, 0.5)
+    };
+    
+    const point_light_positions = [4]vec3{
+        vec3.new(1.5, 1.0, -4.0),
+        vec3.new(2.3, -0.3, -2.0),
+        vec3.new(-4.0, 2.0, -8.0),
+        vec3.new(0.0, -1.0, -3.0),
+    };
+
+    var point_lights: [4]r.PointLight = undefined;
+    // create point lights
+    var i: usize = 0;
+    while (i < 4) {
+        point_lights[i] = r.PointLight{ 
+            .position = point_light_positions[i],
+            .constant = 1.0,
+            .linear = 0.2,
+            .quadratic = 0.064,
+            .ambient = vec3.new(0.05, 0.05, 0.05),
+            .diffuse = vec3.new(0.8, 0.8, 0.8),
+            .specular = vec3.new(1.0, 1.0, 1.0)
+        };
+        i += 1;
+    }
+    std.debug.assert(i == 4);
+
     var nbFrames: i32 = 0;
     var last_time: f32 = 0.0;
 
@@ -186,18 +218,43 @@ pub fn main() !void {
         lighting_shader.setFloat("material.shininess", 32.0);
 
         // directional light - "sun"
-        lighting_shader.setVec3("dirLight.direction", 0.3, -1.0, 0.0);
+        lighting_shader.setVec3("dirLight.direction", sun.direction.x, sun.direction.y, sun.direction.z);
         lighting_shader.setVec3("dirLight.ambient", 0.2, 0.2, 0.2);
         lighting_shader.setVec3("dirLight.diffuse", 0.6, 0.6, 0.6);
         lighting_shader.setVec3("dirLight.specular", 0.5, 0.5, 0.5);
-        // point light 1
-        lighting_shader.setVec3("pointLights[0].position", 1.0, 1.0, -4.0);
-        lighting_shader.setVec3("pointLights[0].ambient", 0.05, 0.05, 0.05);
-        lighting_shader.setVec3("pointLights[0].diffuse", 0.8, 0.8, 0.8);
-        lighting_shader.setVec3("pointLights[0].specular", 1.0, 1.0, 1.0);
-        lighting_shader.setFloat("pointLights[0].constant", 1.0);
-        lighting_shader.setFloat("pointLights[0].linear", 0.09);
-        lighting_shader.setFloat("pointLights[0].quadratic", 0.032);
+
+        // point lights 1-4
+        lighting_shader.setVec3("pointLights[0].position", point_light_positions[0].x, point_light_positions[0].y, point_light_positions[0].z);
+        lighting_shader.setVec3("pointLights[0].ambient", point_lights[0].ambient.x, point_lights[0].ambient.y, point_lights[0].ambient.z);
+        lighting_shader.setVec3("pointLights[0].diffuse", point_lights[0].diffuse.x, point_lights[0].diffuse.y, point_lights[0].diffuse.z);
+        lighting_shader.setVec3("pointLights[0].specular", point_lights[0].specular.x, point_lights[0].specular.y, point_lights[0].specular.z);
+        lighting_shader.setFloat("pointLights[0].constant", point_lights[0].constant);
+        lighting_shader.setFloat("pointLights[0].linear", point_lights[0].linear);
+        lighting_shader.setFloat("pointLights[0].quadratic", point_lights[0].quadratic);
+
+        lighting_shader.setVec3("pointLights[1].position", point_light_positions[1].x, point_light_positions[1].y, point_light_positions[1].z);
+        lighting_shader.setVec3("pointLights[1].ambient", point_lights[1].ambient.x, point_lights[1].ambient.y, point_lights[1].ambient.z);
+        lighting_shader.setVec3("pointLights[1].diffuse", point_lights[1].diffuse.x, point_lights[1].diffuse.y, point_lights[1].diffuse.z);
+        lighting_shader.setVec3("pointLights[1].specular", point_lights[1].specular.x, point_lights[1].specular.y, point_lights[1].specular.z);
+        lighting_shader.setFloat("pointLights[1].constant", point_lights[1].constant);
+        lighting_shader.setFloat("pointLights[1].linear", point_lights[1].linear);
+        lighting_shader.setFloat("pointLights[1].quadratic", point_lights[1].quadratic);
+
+        lighting_shader.setVec3("pointLights[2].position", point_light_positions[2].x, point_light_positions[2].y, point_light_positions[2].z);
+        lighting_shader.setVec3("pointLights[2].ambient", point_lights[2].ambient.x, point_lights[2].ambient.y, point_lights[2].ambient.z);
+        lighting_shader.setVec3("pointLights[2].diffuse", point_lights[2].diffuse.x, point_lights[2].diffuse.y, point_lights[2].diffuse.z);
+        lighting_shader.setVec3("pointLights[2].specular", point_lights[2].specular.x, point_lights[2].specular.y, point_lights[2].specular.z);
+        lighting_shader.setFloat("pointLights[2].constant", point_lights[2].constant);
+        lighting_shader.setFloat("pointLights[2].linear", point_lights[2].linear);
+        lighting_shader.setFloat("pointLights[2].quadratic", point_lights[2].quadratic);
+
+        lighting_shader.setVec3("pointLights[3].position", point_light_positions[3].x, point_light_positions[3].y, point_light_positions[3].z);
+        lighting_shader.setVec3("pointLights[3].ambient", point_lights[3].ambient.x, point_lights[3].ambient.y, point_lights[3].ambient.z);
+        lighting_shader.setVec3("pointLights[3].diffuse", point_lights[3].diffuse.x, point_lights[3].diffuse.y, point_lights[3].diffuse.z);
+        lighting_shader.setVec3("pointLights[3].specular", point_lights[3].specular.x, point_lights[3].specular.y, point_lights[3].specular.z);
+        lighting_shader.setFloat("pointLights[3].constant", point_lights[3].constant);
+        lighting_shader.setFloat("pointLights[3].linear", point_lights[3].linear);
+        lighting_shader.setFloat("pointLights[3].quadratic", point_lights[3].quadratic);
 
         // bind diffuse map
         c.glActiveTexture(c.GL_TEXTURE0);
@@ -232,26 +289,19 @@ pub fn main() !void {
         lighting_shader.setMat4("model", model);
         cube.draw(&stats);
 
+        // render lights
         c.glUseProgram(light_cube_shader.program_id);
-        model = mat4.identity();
-        model = model.scale(vec3.new(0.2, 0.2, 0.2));
-        model = model.translate(vec3.new(1.0, 1.0, -4.0));
-        light_cube_shader.setMat4("view", view);
-        light_cube_shader.setMat4("projection", projection);
-        light_cube_shader.setMat4("model", model);
-        cube.draw(&stats);
-
-        // c.glActiveTexture(c.GL_TEXTURE0);
-        // c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "material.diffuse"), 0); 
-        // c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].diffuse_texture.?.texture_id);
-
-        // c.glActiveTexture(c.GL_TEXTURE1);
-        // c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "material.specular"), 1); 
-        // c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].specular_texture.?.texture_id);
-
-        // c.glActiveTexture(c.GL_TEXTURE0);
-        // c.glUniform1i(c.glGetUniformLocation(teddy_shader.program_id, "texture1"), 0); 
-        // c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].specular_texture.?.texture_id);
+        var l_i: usize = 0;
+        while (l_i < 4) {
+            model = mat4.identity();
+            model = model.scale(vec3.new(0.2, 0.2, 0.2));
+            model = model.translate(point_light_positions[l_i]);
+            light_cube_shader.setMat4("view", view);
+            light_cube_shader.setMat4("projection", projection);
+            light_cube_shader.setMat4("model", model);
+            cube.draw(&stats);
+            l_i += 1;
+        }
 
         // stats.print_drawcalls();
 
@@ -266,7 +316,7 @@ fn process_input(win: ?*c.GLFWwindow) void {
         c.glfwSetWindowShouldClose(window, 1);
     }
 
-    const camera_speed = @floatCast(f32, 2.0 * delta_time);
+    const camera_speed = @floatCast(f32, 4.0 * delta_time);
 
     if (c.glfwGetKey(win, c.GLFW_KEY_W) == c.GLFW_PRESS) {
         camera.pos = vec3.add(camera.pos, camera.front.scale(camera_speed));

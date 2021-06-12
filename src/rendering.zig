@@ -38,9 +38,9 @@ pub const PointLight = struct {
     linear: f32,
     quadratic: f32,
     
-    ambient_colour: vec3,
-    diffuse_colour: vec3,
-    specular_colour: vec3
+    ambient: vec3,
+    diffuse: vec3,
+    specular: vec3
 };
 
 pub const SpotLight = struct {};

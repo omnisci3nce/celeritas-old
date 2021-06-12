@@ -52,7 +52,7 @@ void main()
     // directional
     vec3 result = CalcDirLight(dirLight, norm, viewDir);
     // points
-    for (int i = 0; i < 1; i++) {
+    for (int i = 0; i < 4; i++) {
         result += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
     }
 
