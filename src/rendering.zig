@@ -43,7 +43,9 @@ pub const PointLight = struct {
     specular: vec3
 };
 
-pub const SpotLight = struct {};
+pub const SpotLight = struct {
+    
+};
 
 pub const Material = struct {
     name: []const u8,
