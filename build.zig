@@ -21,28 +21,28 @@ pub fn build(b: *Builder) void {
         .macos => {
             exe.addFrameworkDir("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks");
             exe.linkFramework("OpenGL");
+            exe.linkSystemLibrary("glfw");
         },
         .windows => {
             exe.addIncludeDir("C:/ProgramData/chocolatey/lib/glfw3/tools/glfw-3.0.4.bin.WIN64/include");
             exe.addLibPath("C:/ProgramData/chocolatey/lib/glfw3/tools/glfw-3.0.4.bin.WIN64/lib-msvc120");
             exe.addSystemIncludeDir("C:/bin");
             exe.addSystemIncludeDir("C:/include");
+            exe.addIncludeDir("C:/include/epoxy");
+            exe.addLibPath("C:/lib");
+            exe.linkSystemLibrary("glfw3");
+            exe.linkSystemLibrary("opengl32");
+            exe.linkSystemLibrary("user32");
+            exe.linkSystemLibrary("gdi32");
+            exe.linkSystemLibrary("shell32");
         },
         else => {
-            @panic("don't know how to build on your system");
+            @panic("don't know how to build on your system.");
         }
     }
 
-    exe.addIncludeDir("C:/include/epoxy");
-    exe.addLibPath("C:/lib");
-    // exe.addIncludeDir("C:/Users/joshu/Documents/Code/libepoxy/_build/src");
     exe.linkSystemLibrary("epoxy");
-    exe.linkSystemLibrary("glfw3");
     exe.linkSystemLibrary("c");
-    exe.linkSystemLibrary("opengl32");
-    exe.linkSystemLibrary("user32");
-    exe.linkSystemLibrary("gdi32");
-    exe.linkSystemLibrary("shell32");
     
     exe.install();
 
