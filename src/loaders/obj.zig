@@ -367,8 +367,7 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
         return error.ContainsNoMaterials;
     }
 
-    // materials_array.items[current_mtl].print();
-    std.debug.print("FINISH reading .mtl file!\n", .{});
+    materials_array.items[current_mtl].print();
 }
 
 

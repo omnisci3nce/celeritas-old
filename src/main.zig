@@ -10,7 +10,6 @@ const vec3 = za.vec3;
 const stdMath = std.math;
 const cos = stdMath.cos;
 const sin = stdMath.sin;
-const PngImage = @import("image.zig").Image;
 const obj_loader = @import("loaders/obj.zig");
 const Mesh = r.Mesh;
 const Cube = r.Cube;

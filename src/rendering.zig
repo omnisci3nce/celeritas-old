@@ -6,7 +6,7 @@ const c_allocator = @import("std").heap.c_allocator;
 const za = @import("zalgebra");
 const mat4 = za.mat4;
 const vec3 = za.vec3;
-const PngImage = @import("image.zig").Image;
+const Image = @import("image.zig").Image;
 const cube_vertices = @import("cube.zig").vertices;
 const FrameStats = @import("engine.zig").FrameStats;
 
@@ -82,7 +82,7 @@ pub const Texture = struct {
         var tex: Texture = undefined;
         const alloc = c_allocator; // TODO: CHANGE
 
-        var img = try PngImage.create(text);
+        var img = try Image.create(text);
 
         c.glGenTextures(1, &tex.texture_id);
         c.glBindTexture(c.GL_TEXTURE_2D, tex.texture_id);
