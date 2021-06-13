@@ -6,7 +6,7 @@ const c_allocator = @import("std").heap.c_allocator;
 const za = @import("zalgebra");
 const mat4 = za.mat4;
 const vec3 = za.vec3;
-const PngImage = @import("png.zig").PngImage;
+const PngImage = @import("image.zig").Image;
 const cube_vertices = @import("cube.zig").vertices;
 const FrameStats = @import("engine.zig").FrameStats;
 
@@ -82,13 +82,7 @@ pub const Texture = struct {
         var tex: Texture = undefined;
         const alloc = c_allocator; // TODO: CHANGE
 
-        // const file = try std.fs.cwd().openFile(file_path, .{});
-        // defer file.close();
-
-        // const buffer = try file.reader().readAllAlloc(alloc, 1000000000); // TODO: take an allocator in. change max texture buffer size
-        // defer alloc.free(buffer);
-
-        var png = try PngImage.create(text);
+        var img = try PngImage.create(text);
 
         c.glGenTextures(1, &tex.texture_id);
         c.glBindTexture(c.GL_TEXTURE_2D, tex.texture_id);
@@ -98,17 +92,50 @@ pub const Texture = struct {
         c.glTexParameteri(c.GL_TEXTURE_2D, c.GL_TEXTURE_MAG_FILTER, c.GL_LINEAR);
 
         // actually load the texture
-        c.glTexImage2D(
-            c.GL_TEXTURE_2D,
-            0,
-            c.GL_RGBA,
-            @intCast(c_int, png.width),
-            @intCast(c_int, png.height),
-            0,
-            c.GL_RGBA,
-            c.GL_UNSIGNED_BYTE,
-            @ptrCast(*c_void, &png.raw[0]),
-        );
+        switch (img.channels) {
+            1 => {
+                c.glTexImage2D(
+                    c.GL_TEXTURE_2D,
+                    0,
+                    c.GL_RED,
+                    @intCast(c_int, img.width),
+                    @intCast(c_int, img.height),
+                    0,
+                    c.GL_RED,
+                    c.GL_UNSIGNED_BYTE,
+                    @ptrCast(*c_void, &img.raw[0]),
+                );
+            },
+            3 => {
+                c.glTexImage2D(
+                    c.GL_TEXTURE_2D,
+                    0,
+                    c.GL_RGB,
+                    @intCast(c_int, img.width),
+                    @intCast(c_int, img.height),
+                    0,
+                    c.GL_RGB,
+                    c.GL_UNSIGNED_BYTE,
+                    @ptrCast(*c_void, &img.raw[0]),
+                );
+            },
+            4 => {
+                c.glTexImage2D(
+                    c.GL_TEXTURE_2D,
+                    0,
+                    c.GL_RGBA,
+                    @intCast(c_int, img.width),
+                    @intCast(c_int, img.height),
+                    0,
+                    c.GL_RGBA,
+                    c.GL_UNSIGNED_BYTE,
+                    @ptrCast(*c_void, &img.raw[0]),
+                );
+            },
+            else => {
+                @panic("I dont know how to upload this image format as a texture, help!!");
+            }
+        }
         c.glGenerateMipmap(c.GL_TEXTURE_2D);
 
         tex.loaded = true;

@@ -334,6 +334,7 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
             var reader2 = file2.reader();
             const t_text = try reader2.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
 
+            std.debug.print("Load texture \n", .{});
             const texture = try Texture.create(t_text);
             materials_array.items[current_mtl].diffuse_texture = texture;
 
@@ -366,8 +367,8 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
         return error.ContainsNoMaterials;
     }
 
-    materials_array.items[current_mtl].print();
-    // std.debug.print("I read the .mtl file!\n", .{});
+    // materials_array.items[current_mtl].print();
+    std.debug.print("FINISH reading .mtl file!\n", .{});
 }
 
 

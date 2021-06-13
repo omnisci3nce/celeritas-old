@@ -10,7 +10,7 @@ const vec3 = za.vec3;
 const stdMath = std.math;
 const cos = stdMath.cos;
 const sin = stdMath.sin;
-const PngImage = @import("png.zig").PngImage;
+const PngImage = @import("image.zig").Image;
 const obj_loader = @import("loaders/obj.zig");
 const Mesh = r.Mesh;
 const Cube = r.Cube;
@@ -104,8 +104,8 @@ pub fn main() !void {
     };
 
     // ---- meshes
-    // const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
-    // std.debug.print("Num materials: {d}\n", .{asset_model.meshes.len});
+    const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
+    std.debug.print("Num materials: {d}\n", .{asset_model.meshes.len});
 
     var container_file = try std.fs.cwd().openFile("assets/container2.png", .{});
     defer container_file.close();
@@ -130,7 +130,9 @@ pub fn main() !void {
     const light_cube_shader = try r.ShaderProgram.create_from_file("shaders/light_cube.vert", "shaders/light_cube.frag");
     
     // ---- textures
+    std.debug.print("Loading diffuse container png\n", .{});
     var diffuse = try r.Texture.create(container_src);
+    std.debug.print("Loading specular container png\n", .{});
     var specular = try r.Texture.create(container_src2);
 
     const cube = try Cube.create(light_cube_shader);
@@ -288,6 +290,18 @@ pub fn main() !void {
         model = model.translate(vec3.new(4.0, 0.0, -6.0));
         lighting_shader.setMat4("model", model);
         cube.draw(&stats);
+
+        // backpack
+        model = mat4.identity();
+        model = model.rotate(180, vec3.new(0.0, 1.0, 0.0));
+        lighting_shader.setMat4("model", model);
+        c.glActiveTexture(c.GL_TEXTURE0);
+        c.glUniform1i(c.glGetUniformLocation(lighting_shader.program_id, "material.diffuse"), 0); 
+        c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].diffuse_texture.?.texture_id);
+        c.glActiveTexture(c.GL_TEXTURE1);
+        c.glUniform1i(c.glGetUniformLocation(lighting_shader.program_id, "material.specular"), 1); 
+        c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].specular_texture.?.texture_id);
+        asset_model.draw();
 
         // render lights
         c.glUseProgram(light_cube_shader.program_id);
