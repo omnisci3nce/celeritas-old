@@ -2,13 +2,19 @@ const std = @import("std");
 const Builder = @import("std").build.Builder;
 const builtin = @import("builtin");
 
+const ztBuild = @import("deps/ZT/build.zig");
+
 pub fn build(b: *Builder) void {
     const mode = b.standardReleaseOptions();
+    const target = b.standardTargetOptions(.{});
     // const windows = b.option(bool, "windows", "create windows build") orelse false;
 
     var exe = b.addExecutable("celeritas_demo", "src/main.zig");
-    exe.addCSourceFile("deps/stb_image-2.26/stb_image_impl.c", &[_][]const u8{"-std=c99"});
     exe.setBuildMode(mode);
+
+    ztBuild.link("deps/ZT/", b, exe, target);
+    
+    exe.addCSourceFile("deps/stb_image-2.26/stb_image_impl.c", &[_][]const u8{"-std=c99"});
 
     exe.addPackagePath("zlm", "deps/zlm/zlm.zig");
     exe.addIncludeDir("deps/stb_image-2.26");
