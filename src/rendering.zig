@@ -156,6 +156,8 @@ pub const Mesh = struct {
     vertices: usize,
     indices: usize,
 
+    material: ?Material,
+
     // TODO: make indices option. if passed in make an ebo, otherwise just load vertices in (e.g. cube.zig)
     pub fn create(vertices: []f32, indices: ?[]u32) Mesh {
         // generate VBO
@@ -197,11 +199,28 @@ pub const Mesh = struct {
             .vao = VAO,
             .ebo = if (indices != null) EBO else null,
             .vertices = vertices.len,
-            .indices = if (indices != null) indices.?.len else 0
+            .indices = if (indices != null) indices.?.len else 0,
+            .material = null
         };
     }
 
-    pub fn draw(mesh: Mesh) void {
+    pub fn draw(mesh: Mesh, shaderId: c.GLuint) void {
+        // bind textures
+
+        if (mesh.material) |material| {
+            var i: c_uint = 0;
+            if (material.diffuse_texture) |diffuse_texture| {
+                c.glActiveTexture(c.GL_TEXTURE0);
+                c.glUniform1i(c.glGetUniformLocation(shaderId, "material.diffuse"), 0);
+                c.glBindTexture(c.GL_TEXTURE_2D, diffuse_texture.texture_id);
+            }
+            if (material.specular_texture) |specular_texture| {
+                c.glActiveTexture(c.GL_TEXTURE1);
+                c.glUniform1i(c.glGetUniformLocation(shaderId, "material.specular"), 1);
+                c.glBindTexture(c.GL_TEXTURE_2D, specular_texture.texture_id);
+            }
+        }
+
         c.glBindVertexArray(mesh.vao);
         if (mesh.ebo != null) {
             c.glDrawElements(c.GL_TRIANGLES, @intCast(c_int, mesh.indices), c.GL_UNSIGNED_INT, null);
@@ -216,9 +235,9 @@ pub const Model = struct {
     materials: []Material,
     use_gamma_correction: bool,
 
-    pub fn draw(m: Model) void {
+    pub fn draw(m: Model, shaderId: c.GLuint) void {
         for (m.meshes) |mesh| {
-            mesh.draw();
+            mesh.draw(shaderId);
         } 
     }
 };

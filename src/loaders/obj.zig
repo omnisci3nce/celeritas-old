@@ -83,6 +83,8 @@ pub fn load_obj(file_path: []const u8) !Model {
 
     var object_name_b = try allocator.alloc(u8, 1024); // TODO: not using name at the moment
     var first_object = true;
+    var current_object_index: usize = 0;
+    var current_material: Material = undefined;
     // read each line by line
     while (lines.next()) |line| {
         var line_items = std.mem.split(line, " ");
@@ -102,7 +104,7 @@ pub fn load_obj(file_path: []const u8) !Model {
         } else if (std.mem.eql(u8, line_header, "o")) {
             // first 'o' doesnt create an object
             if (!first_object) {
-                const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_texcoords, &tmp_faces, position_offset, face_offset);
+                const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_texcoords, &tmp_faces, position_offset, face_offset, current_material);
                 try tmp_meshes.append(mesh);
                 // std.debug.print("Submesh {s} stats: {d} vertices - {d} normals - {d} faces \n", .{
                 //     object_name_b,
@@ -114,19 +116,36 @@ pub fn load_obj(file_path: []const u8) !Model {
                 normal_offset = tmp_normals.items.len;
                 texcoord_offset = tmp_texcoords.items.len;
                 face_offset = tmp_faces.items.len;
+                current_object_index += 1;
             }
             first_object = false;
             const object_name = try parse_object(line); // set current object name
             std.mem.set(u8, object_name_b, 0);
             std.mem.copy(u8, object_name_b, object_name);
 
+        } else if (std.mem.eql(u8, line_header, "usemtl")) {
+            // std.debug.print("Current object index: {d}\n", .{current_object_index});
+
+            // std.debug.print("Loop through materials\n", .{});
+            // loop through materials
+            for (tmp_materials.items) |mat, index| {
+                // std.debug.print("{d}: {s}\n", .{index, mat.name});
+                // tmp_materials.items[index].print();
+                const next = line_items.next().?;
+                // std.debug.print("{s}\n", .{next});
+                if (std.mem.eql(u8, next, mat.name)) {
+                    // std.debug.print("MATCH!\n", .{});
+                    current_material = mat;
+                }
+            }
+
+
         } else {} // ignore
-        // TODO: handle material
     }
 
     // last mesh or if one wasnt created
     if (tmp_positions.items.len > 0 and tmp_faces.items.len != face_offset) {
-        const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_texcoords, &tmp_faces, position_offset, face_offset);
+        const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_texcoords, &tmp_faces, position_offset, face_offset, current_material);
         try tmp_meshes.append(mesh);
     }
 
@@ -202,7 +221,8 @@ fn create_submesh(
     tmp_texcoords: *std.ArrayList(vec2),
     tmp_faces:     *std.ArrayList(FaceElement),
     position_offset: usize,
-    face_offset: usize
+    face_offset: usize,
+    mat: Material
 ) !Mesh {
     // position offset to current position len - allocate for vertex array
     var vertices_buffer = try allocator.alloc(f32, (tmp_positions.items.len - position_offset) * 8);
@@ -235,10 +255,13 @@ fn create_submesh(
         i += 1;
     }
 
-    return Mesh.create(
+    var mesh = Mesh.create(
         vertices_buffer,
         indices_buffer
     );
+    // mat.print();
+    mesh.material = mat;
+    return mesh;
 }
 
 const LoadMaterialLibError = error{
@@ -291,7 +314,9 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
         
         if (std.mem.eql(u8, m_line_header, "newmtl")) {
             const name = m_line_items.next().?;
-            const new_mtl = Material{ .name = name };
+            const name_string = try allocator.alloc(u8, name.len);
+            std.mem.copy(u8, name_string, name);
+            const new_mtl = Material{ .name = name_string };
             try materials_array.append(new_mtl);
 
             if (materials_array.items.len > 1) {
