@@ -122,7 +122,6 @@ pub fn load_obj(file_path: []const u8) !Model {
             const object_name = try parse_object(line); // set current object name
             std.mem.set(u8, object_name_b, 0);
             std.mem.copy(u8, object_name_b, object_name);
-
         } else if (std.mem.eql(u8, line_header, "usemtl")) {
             // std.debug.print("Current object index: {d}\n", .{current_object_index});
 
@@ -314,8 +313,7 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
         
         if (std.mem.eql(u8, m_line_header, "newmtl")) {
             const name = m_line_items.next().?;
-            const name_string = try allocator.alloc(u8, name.len);
-            std.mem.copy(u8, name_string, name);
+            const name_string = try allocator.dupe(u8, name);
             const new_mtl = Material{ .name = name_string };
             try materials_array.append(new_mtl);
 
