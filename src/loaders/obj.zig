@@ -63,12 +63,9 @@ pub fn load_obj(file_path: []const u8) !Model {
     const file = try std.fs.cwd().openFile(file_path, .{});
     defer file.close();
 
-
     // get directory to pass to material loading because it uses relative paths
     const dir = std.fs.path.dirname(file_path).?;
     std.debug.print("dir: {s}\n", .{dir});
-
-
 
     const reader = file.reader();
     const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
@@ -83,7 +80,6 @@ pub fn load_obj(file_path: []const u8) !Model {
 
     var object_name_b = try allocator.alloc(u8, 1024); // TODO: not using name at the moment
     var first_object = true;
-    var current_object_index: usize = 0;
     var current_material: Material = undefined;
     // read each line by line
     while (lines.next()) |line| {
@@ -123,22 +119,13 @@ pub fn load_obj(file_path: []const u8) !Model {
             std.mem.set(u8, object_name_b, 0);
             std.mem.copy(u8, object_name_b, object_name);
         } else if (std.mem.eql(u8, line_header, "usemtl")) {
-            // std.debug.print("Current object index: {d}\n", .{current_object_index});
-
-            // std.debug.print("Loop through materials\n", .{});
             // loop through materials
             for (tmp_materials.items) |mat, index| {
-                // std.debug.print("{d}: {s}\n", .{index, mat.name});
-                // tmp_materials.items[index].print();
                 const next = line_items.next().?;
-                // std.debug.print("{s}\n", .{next});
                 if (std.mem.eql(u8, next, mat.name)) {
-                    // std.debug.print("MATCH!\n", .{});
                     current_material = mat;
                 }
             }
-
-
         } else {} // ignore
     }
 
@@ -258,7 +245,6 @@ fn create_submesh(
         vertices_buffer,
         indices_buffer
     );
-    // mat.print();
     mesh.material = mat;
     return mesh;
 }
@@ -296,8 +282,6 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
     const dir = try std.fs.cwd().openDir(directory, .{});
     const file = try dir.openFile(path, .{}); 
     defer file.close();
-
-    std.debug.print("backpack.mtl found\n", .{});
 
     const reader = file.reader();
     const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
