@@ -112,13 +112,14 @@ pub fn load_obj(file_path: []const u8) !Model {
                 normal_offset = tmp_normals.items.len;
                 texcoord_offset = tmp_texcoords.items.len;
                 face_offset = tmp_faces.items.len;
-                current_object_index += 1;
             }
             first_object = false;
             const object_name = try parse_object(line); // set current object name
             std.mem.set(u8, object_name_b, 0);
             std.mem.copy(u8, object_name_b, object_name);
         } else if (std.mem.eql(u8, line_header, "usemtl")) {
+            // TODO: Create new Mesh, if Material changes within a group
+
             // loop through materials
             for (tmp_materials.items) |mat, index| {
                 const next = line_items.next().?;
@@ -336,7 +337,7 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
             // TODO: cleanup variable names
             const dir2 = try std.fs.cwd().openDir(directory, .{});
             const file2 = try dir2.openFile(tex_path, .{});
-            std.debug.print("file2 : {any}\n", .{file2});
+            // std.debug.print("file2 : {any}\n", .{file2});
 
             var reader2 = file2.reader();
             const t_text = try reader2.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
@@ -378,18 +379,15 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
 }
 
 
-
 // Tests
 
 const builtin = @import("builtin");
 const expect = std.testing.expect;
 const expectEqual = std.testing.expectEqual;
 
-
 test "builtin.is_test" {
     expect(builtin.is_test);
 }
-
 
 // unit tests
 

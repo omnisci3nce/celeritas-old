@@ -295,16 +295,10 @@ pub fn main() !void {
 
         // backpack
         model = mat4.identity();
-        // model = model.scale(vec3.new(0.1, 0.1, 0.1));
+        model = model.scale(vec3.new(0.1, 0.1, 0.1));
         model = model.rotate(180, vec3.new(0.0, 1.0, 0.0));
-        // model = model.translate(vec3.new(0.0, 2.0, 0.0));
+        model = model.translate(vec3.new(0.0, 2.0, 0.0));
         lighting_shader.setMat4("model", model);
-        // c.glActiveTexture(c.GL_TEXTURE0);
-        // c.glUniform1i(c.glGetUniformLocation(lighting_shader.program_id, "material.diffuse"), 0); 
-        // c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[1].diffuse_texture.?.texture_id);
-        // c.glActiveTexture(c.GL_TEXTURE1);
-        // c.glUniform1i(c.glGetUniformLocation(lighting_shader.program_id, "material.specular"), 1); 
-        // c.glBindTexture(c.GL_TEXTURE_2D, asset_model.materials[0].specular_texture.?.texture_id);
         asset_model.draw(lighting_shader.program_id);
 
         // render lights
