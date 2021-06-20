@@ -85,6 +85,8 @@ pub fn load_obj(file_path: []const u8) !Model {
     while (lines.next()) |line| {
         var line_items = std.mem.split(line, " ");
         const line_header = line_items.next().?; // read first character
+
+        // std.debug.print("{s} \n", .{line});
         
         if (std.mem.eql(u8, line_header, "v")) {
             const pos = try parse_vertex(line);
@@ -119,10 +121,12 @@ pub fn load_obj(file_path: []const u8) !Model {
             std.mem.copy(u8, object_name_b, object_name);
         } else if (std.mem.eql(u8, line_header, "usemtl")) {
             // TODO: Create new Mesh, if Material changes within a group
-
             // loop through materials
+            const next = line_items.next().?;
             for (tmp_materials.items) |mat, index| {
-                const next = line_items.next().?;
+                
+                // std.debug.print("here\n", .{});
+                
                 if (std.mem.eql(u8, next, mat.name)) {
                     current_material = mat;
                 }
@@ -130,13 +134,14 @@ pub fn load_obj(file_path: []const u8) !Model {
         } else {} // ignore
     }
 
+
     // last mesh or if one wasnt created
     if (tmp_positions.items.len > 0 and tmp_faces.items.len != face_offset) {
         const mesh = try create_submesh(&tmp_positions, &tmp_normals, &tmp_texcoords, &tmp_faces, position_offset, face_offset, current_material);
         try tmp_meshes.append(mesh);
     }
 
-    // std.debug.print("Num sub-meshes: {d}\n", .{tmp_meshes.items.len});
+    std.debug.print("Num sub-meshes: {d}\n", .{tmp_meshes.items.len});
 
     return Model{
         .meshes = tmp_meshes.toOwnedSlice(),

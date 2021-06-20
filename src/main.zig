@@ -295,9 +295,9 @@ pub fn main() !void {
 
         // backpack
         model = mat4.identity();
-        model = model.scale(vec3.new(0.1, 0.1, 0.1));
+        // model = model.scale(vec3.new(0.1, 0.1, 0.1));
         model = model.rotate(180, vec3.new(0.0, 1.0, 0.0));
-        model = model.translate(vec3.new(0.0, 2.0, 0.0));
+        // model = model.translate(vec3.new(0.0, 2.0, 0.0));
         lighting_shader.setMat4("model", model);
         asset_model.draw(lighting_shader.program_id);
 
