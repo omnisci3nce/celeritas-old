@@ -130,9 +130,9 @@ pub fn main() !void {
     
 
     // ---- textures
-    std.debug.print("Loading diffuse container png\n", .{});
+    // std.debug.print("Loading diffuse container png\n", .{});
     var diffuse = try r.Texture.create(container_src);
-    std.debug.print("Loading specular container png\n", .{});
+    // std.debug.print("Loading specular container png\n", .{});
     var specular = try r.Texture.create(container_src2);
 
     const cube = try Cube.create(light_cube_shader);
