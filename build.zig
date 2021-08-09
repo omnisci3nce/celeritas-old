@@ -37,6 +37,10 @@ pub fn build(b: *Builder) void {
             exe.linkSystemLibrary("gdi32");
             exe.linkSystemLibrary("shell32");
         },
+        .linux => {
+            exe.linkSystemLibrary("gl");
+            exe.linkSystemLibrary("glfw");
+        },
         else => {
             @panic("don't know how to build on your system.");
         }
