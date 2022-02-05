@@ -44,7 +44,7 @@ pub const PointLight = struct {
 };
 
 pub const SpotLight = struct {
-    
+    // TODO
 };
 
 pub const Material = struct {

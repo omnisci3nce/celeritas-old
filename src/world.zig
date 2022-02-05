@@ -1,5 +1,3 @@
-
-
 const Scene = struct {
     // children: 
 }
