@@ -4,8 +4,8 @@ const c = @import("c.zig");
 const c_allocator = @import("std").heap.c_allocator;
 // TODO: take allocators as arguments
 const za = @import("zalgebra");
-const mat4 = za.mat4;
-const vec3 = za.vec3;
+const mat4 = za.Mat4;
+const vec3 = za.Vec3;
 const Image = @import("image.zig").Image;
 const cube_vertices = @import("cube.zig").vertices;
 const FrameStats = @import("engine.zig").FrameStats;
@@ -80,7 +80,7 @@ pub const Texture = struct {
 
     pub fn create(text: []const u8) !Texture {
         var tex: Texture = undefined;
-        const alloc = c_allocator; // TODO: CHANGE
+        // const alloc = c_allocator; // TODO: CHANGE
 
         var img = try Image.create(text);
 
@@ -103,7 +103,7 @@ pub const Texture = struct {
                     0,
                     c.GL_RED,
                     c.GL_UNSIGNED_BYTE,
-                    @ptrCast(*c_void, &img.raw[0]),
+                    @ptrCast(*anyopaque, &img.raw[0]),
                 );
             },
             3 => {
@@ -116,7 +116,7 @@ pub const Texture = struct {
                     0,
                     c.GL_RGB,
                     c.GL_UNSIGNED_BYTE,
-                    @ptrCast(*c_void, &img.raw[0]),
+                    @ptrCast(*anyopaque, &img.raw[0]),
                 );
             },
             4 => {
@@ -129,7 +129,7 @@ pub const Texture = struct {
                     0,
                     c.GL_RGBA,
                     c.GL_UNSIGNED_BYTE,
-                    @ptrCast(*c_void, &img.raw[0]),
+                    @ptrCast(*anyopaque, &img.raw[0]),
                 );
             },
             else => {
@@ -176,8 +176,8 @@ pub const Mesh = struct {
         const stride = 8 * @sizeOf(c.GLfloat);
         c.glBindVertexArray(VAO);
         c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, stride, null);                                                // position
-        c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, stride, @intToPtr(*const c_void, 3 * @sizeOf(c.GLfloat)));    // normal
-        c.glVertexAttribPointer(2, 2, c.GL_FLOAT, c.GL_FALSE, stride, @intToPtr(*const c_void, 6 * @sizeOf(c.GLfloat)));    // tex coords
+        c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, stride, @intToPtr(*anyopaque, 3 * @sizeOf(c.GLfloat)));    // normal
+        c.glVertexAttribPointer(2, 2, c.GL_FLOAT, c.GL_FALSE, stride, @intToPtr(*anyopaque, 6 * @sizeOf(c.GLfloat)));    // tex coords
         c.glEnableVertexAttribArray(0);
         c.glEnableVertexAttribArray(1);
         c.glEnableVertexAttribArray(2);
@@ -208,7 +208,7 @@ pub const Mesh = struct {
         // bind textures
 
         if (mesh.material) |material| {
-            var i: c_uint = 0;
+            // var i: c_uint = 0;
             if (material.diffuse_texture) |diffuse_texture| {
                 c.glActiveTexture(c.GL_TEXTURE0);
                 c.glUniform1i(c.glGetUniformLocation(shaderId, "material.diffuse"), 0);
@@ -295,7 +295,7 @@ pub const ShaderProgram = struct {
 
     pub fn setMat4(sp: ShaderProgram, name: []const u8, value: mat4) void {
         const location = c.glGetUniformLocation(sp.program_id, name.ptr);
-        c.glUniformMatrix4fv(location, 1, c.GL_FALSE, value.get_data());
+        c.glUniformMatrix4fv(location, 1, c.GL_FALSE, value.getData());
     }
 
     // pub fn destroy() {}

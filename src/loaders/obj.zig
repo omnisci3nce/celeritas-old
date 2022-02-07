@@ -1,8 +1,8 @@
 const std = @import("std");
 const allocator = @import("std").heap.c_allocator;
 const za = @import("zalgebra");
-const vec2 = za.vec2;
-const vec3 = za.vec3;
+const vec2 = za.Vec2;
+const vec3 = za.Vec3;
 const SplitIterator = std.mem.SplitIterator;
 const Mesh = @import("../rendering.zig").Mesh;
 const Model = @import("../rendering.zig").Model;
@@ -71,7 +71,7 @@ pub fn load_obj(file_path: []const u8) !Model {
     const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
     defer allocator.free(text);
     
-    var lines = std.mem.split(text, "\n"); // get each line
+    var lines = std.mem.split(u8, text, "\n"); // get each line
 
     var position_offset: usize = 0;
     var normal_offset: usize = 0;
@@ -83,7 +83,7 @@ pub fn load_obj(file_path: []const u8) !Model {
     var current_material: Material = undefined;
     // read each line by line
     while (lines.next()) |line| {
-        var line_items = std.mem.split(line, " ");
+        var line_items = std.mem.split(u8, line, " ");
         const line_header = line_items.next().?; // read first character
 
         // std.debug.print("{s} \n", .{line});
@@ -123,9 +123,7 @@ pub fn load_obj(file_path: []const u8) !Model {
             // TODO: Create new Mesh, if Material changes within a group
             // loop through materials
             const next = line_items.next().?;
-            for (tmp_materials.items) |mat, index| {
-                
-                // std.debug.print("here\n", .{});
+            for (tmp_materials.items) |mat| {
                 
                 if (std.mem.eql(u8, next, mat.name)) {
                     current_material = mat;
@@ -152,7 +150,7 @@ pub fn load_obj(file_path: []const u8) !Model {
 
 // A vertex is specified via a line starting with the letter v. That is followed by (x,y,z[,w]) coordinates. W is optional and defaults to 1.0.
 fn parse_vertex(line: []const u8) !vec3 {
-    var line_items = std.mem.split(line, " ");
+    var line_items = std.mem.split(u8, line, " ");
     _ = line_items.next(); // skip line header
     const x = try std.fmt.parseFloat(f32, line_items.next().?);
     const y = try std.fmt.parseFloat(f32, line_items.next().?);
@@ -161,7 +159,7 @@ fn parse_vertex(line: []const u8) !vec3 {
 }
 
 fn parse_normal(normal_array: *std.ArrayList(vec3), line: []const u8) !void {
-    var line_items = std.mem.split(line, " ");
+    var line_items = std.mem.split(u8, line, " ");
     _ = line_items.next(); // skip line header
     const x = try std.fmt.parseFloat(f32, line_items.next().?);
     const y = try std.fmt.parseFloat(f32, line_items.next().?);
@@ -170,7 +168,7 @@ fn parse_normal(normal_array: *std.ArrayList(vec3), line: []const u8) !void {
 }
 
 fn parse_texture_coords (tex_coords_array: *std.ArrayList(vec2), line: []const u8) !void {
-    var line_items = std.mem.split(line, " ");
+    var line_items = std.mem.split(u8, line, " ");
     _ = line_items.next(); // skip line header
     const x = try std.fmt.parseFloat(f32, line_items.next().?);
     const y = try std.fmt.parseFloat(f32, line_items.next().?);
@@ -178,13 +176,13 @@ fn parse_texture_coords (tex_coords_array: *std.ArrayList(vec2), line: []const u
 }
 
 fn parse_face(elements_array: *std.ArrayList(FaceElement), line: []const u8) !void {
-    var line_items = std.mem.split(line, " ");
+    var line_items = std.mem.split(u8, line, " ");
     _ = line_items.next(); // skip line header
 
     var v_i: u32 = 0;
     while (v_i < 3) {
         var vert = line_items.next().?;
-        var vert_parts = std.mem.split(vert, "/");
+        var vert_parts = std.mem.split(u8, vert, "/");
         var v_vertex_idx = vert_parts.next();
         var v_texture_idx = vert_parts.next();
         var v_normal_idx = vert_parts.next();
@@ -200,7 +198,7 @@ fn parse_face(elements_array: *std.ArrayList(FaceElement), line: []const u8) !vo
 }
 
 fn parse_object(line: []const u8) ![]const u8 {
-    var line_items = std.mem.split(line, " ");
+    var line_items = std.mem.split(u8, line, " ");
     _ = line_items.next(); // skip line header
     var name = line_items.next().?;
 
@@ -233,14 +231,14 @@ fn create_submesh(
         // std.debug.print("tex: {d} {d}\n", .{tex.x, tex.y});
         const relative_pos_i = v - position_offset;
         // std.debug.print("{any}\n", .{relative_pos_i});
-        vertices_buffer[relative_pos_i * 8] = pos.x;
-        vertices_buffer[relative_pos_i * 8 + 1] = pos.y;
-        vertices_buffer[relative_pos_i * 8 + 2] = pos.z;
-        vertices_buffer[relative_pos_i * 8 + 3] = norm.x;
-        vertices_buffer[relative_pos_i * 8 + 4] = norm.y;
-        vertices_buffer[relative_pos_i * 8 + 5] = norm.z;
-        vertices_buffer[relative_pos_i * 8 + 6] = tex.x;
-        vertices_buffer[relative_pos_i * 8 + 7] = tex.y;
+        vertices_buffer[relative_pos_i * 8] = pos.x();
+        vertices_buffer[relative_pos_i * 8 + 1] = pos.y();
+        vertices_buffer[relative_pos_i * 8 + 2] = pos.z();
+        vertices_buffer[relative_pos_i * 8 + 3] = norm.x();
+        vertices_buffer[relative_pos_i * 8 + 4] = norm.y();
+        vertices_buffer[relative_pos_i * 8 + 5] = norm.z();
+        vertices_buffer[relative_pos_i * 8 + 6] = tex.x();
+        vertices_buffer[relative_pos_i * 8 + 7] = tex.y();
 
         indices_buffer[i] = @intCast(u32, relative_pos_i);
 
@@ -261,7 +259,7 @@ const LoadMaterialLibError = error{
 };
 
 fn parse_float3(line: []const u8) !vec3 {
-    var line_items = std.mem.split(line, " ");
+    var line_items = std.mem.split(u8, line, " ");
     _ = line_items.next(); // skip line header
     const x = try std.fmt.parseFloat(f32, line_items.next().?);
     const y = try std.fmt.parseFloat(f32, line_items.next().?);
@@ -270,7 +268,7 @@ fn parse_float3(line: []const u8) !vec3 {
 }
 
 fn parse_str1(line: []const u8) ![]const u8 {
-    var line_items = std.mem.split(line, " ");
+    var line_items = std.mem.split(u8, line, " ");
     _ = line_items.next(); // skip line header
     var str = line_items.next().?;
 
@@ -279,7 +277,7 @@ fn parse_str1(line: []const u8) ![]const u8 {
 
 pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []const u8, directory: []const u8) !void {
     std.debug.print("BEGIN load material lib\n", .{});
-    var line_items = std.mem.split(line, " ");
+    var line_items = std.mem.split(u8, line, " ");
     _ = line_items.next(); // skip line header
     var path = line_items.next().?;
 
@@ -293,12 +291,12 @@ pub fn load_material_lib(materials_array: *std.ArrayList(Material), line: []cons
     const text = try reader.readAllAlloc(allocator, std.math.maxInt(u64)); // read whole thing into memory
     defer allocator.free(text);
     // get each line
-    var mtl_lines = std.mem.split(text, "\n");
+    var mtl_lines = std.mem.split(u8, text, "\n");
 
     
     var current_mtl: usize = 0;
     while (mtl_lines.next()) |m_line| {
-        var m_line_items = std.mem.split(m_line, " ");
+        var m_line_items = std.mem.split(u8, m_line, " ");
         const m_line_header = m_line_items.next().?;
         
         if (std.mem.eql(u8, m_line_header, "newmtl")) {
@@ -408,11 +406,11 @@ test "parse_vertex - negative numbers" {
     expectEqual(vec3.is_eq(v, vec3.new(-3.0, -99.0, 1.0)), true);
 }
 
-test "parse_vertex - 4 vertices causes error (we don't handle quads yet)" {
-    const v = try parse_vertex("v 1.0 1.0 1.0 1.0");
-    // should error
-    expect(builtin.is_test);
-}
+// test "parse_vertex - 4 vertices causes error (we don't handle quads yet)" {
+//     const v = try parse_vertex("v 1.0 1.0 1.0 1.0");
+//     // should error
+//     expect(builtin.is_test);
+// }
 
 test "parse_vertex - " {
 expect(builtin.is_test);

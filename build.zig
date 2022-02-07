@@ -1,10 +1,10 @@
 const std = @import("std");
 const Builder = @import("std").build.Builder;
 const builtin = @import("builtin");
+const target = @import("builtin").target;
 
 pub fn build(b: *Builder) void {
     const mode = b.standardReleaseOptions();
-    const target = b.standardTargetOptions(.{});
 
     var exe = b.addExecutable("celeritas_demo", "src/main.zig");
     exe.setBuildMode(mode);
@@ -18,7 +18,7 @@ pub fn build(b: *Builder) void {
     exe.addIncludeDir("deps/zalgebra");
     exe.addIncludeDir("src");
 
-    switch (std.Target.current.os.tag) {
+    switch (target.os.tag) {
         .macos => {
             exe.addFrameworkDir("/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/System/Library/Frameworks");
             exe.linkFramework("OpenGL");
