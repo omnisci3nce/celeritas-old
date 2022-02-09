@@ -298,6 +298,11 @@ pub const ShaderProgram = struct {
         c.glUniformMatrix4fv(location, 1, c.GL_FALSE, value.getData());
     }
 
+    pub fn setInt(sp: ShaderProgram, name: []const u8, value: i32) void {
+        const location = c.glGetUniformLocation(sp.program_id, name.ptr);
+        c.glUniform1i(location, value);
+    }
+
     // pub fn destroy() {}
 };
 
