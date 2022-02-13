@@ -16,7 +16,6 @@ const Cube = r.Cube;
 const plane = @import("plane.zig");
 const engine = @import("engine.zig");
 
-// TODO: handle window resizing
 const width: i32 = 800;
 const height: i32 = 600;
 var last_x: f64 = width / 2;
@@ -29,23 +28,13 @@ var pitch: f32 = 0.0;
 
 const cube_vertices = @import("cube.zig").vertices;
 const cube_positions = @import("cube.zig").positions;
-// positions of the point lights
-const pointLightPositions = [_]vec3{ vec3.new(0.7, 0.2, 2.0), vec3.new(2.3, -3.3, -4.0), vec3.new(-4.0, 2.0, -12.0), vec3.new(0.0, 0.0, -3.0) };
 
 const light_pos = vec3.new(1.2, 1.0, 2.0);
-
-const indices = [_]u32{
-    0, 1, 3, // first triangle
-    1, 2, 3, // second triangle
-};
 
 var camera = r.Camera.create(vec3.new(0.0, 0.0, 3.0), vec3.new(0.0, 0.0, -1.0), vec3.new(0.0, 1.0, 0.0));
 
 var delta_time: f64 = 0.0;
 var last_frame: f64 = 0.0;
-
-// TODO: set up logging and log levels
-// refer to this https://github.com/ziglang/zig/blob/master/lib/std/log.zig
 
 fn init() bool {
     _ = c.glfwSetErrorCallback(error_callback);
@@ -59,7 +48,6 @@ fn init() bool {
     c.glfwWindowHint(c.GLFW_OPENGL_FORWARD_COMPAT, c.GL_TRUE);
     c.glfwWindowHint(c.GLFW_OPENGL_PROFILE, c.GLFW_OPENGL_CORE_PROFILE);
     // c.glfwWindowHint(c.GLFW_COCOA_RETINA_FRAMEBUFFER, c.GL_FALSE);
-    // TODO: Investigate what this does
     // c.glfwWindowHint(c.GLFW_OPENGL_DEBUG_CONTEXT, debug_gl.is_on);
     // c.glfwWindowHint(c.GLFW_SAMPLES, 4);                // 4x antialiasing
 
@@ -90,6 +78,7 @@ pub fn main() !void {
     var stats = engine.FrameStats{ .drawcall_count = 0, .shader_switch_count = 0, .triangle_count = 0, .frame_time = 0 };
 
     // ---- meshes
+    // TODO: abstract load_obj and openFile + defer into single line functions
     // const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
     // std.debug.print("Num materials: {d}\n", .{asset_model.meshes.len});
 
@@ -120,8 +109,6 @@ pub fn main() !void {
     // defer c_allocator.free(container_src2);
 
     // ---- shaders
-    // const lighting_shader = try r.ShaderProgram.create_from_file("shaders/basic_lighting.vert", "shaders/basic_lighting.frag");
-    // const light_cube_shader = try r.ShaderProgram.create_from_file("shaders/light_cube.vert", "shaders/light_cube.frag");
     const simple_depth_shader = try r.ShaderProgram.create_from_file("shaders/3.1.1.shadow_mapping_depth.vs", "shaders/3.1.1.shadow_mapping_depth.fs");
     const debug_depth_quad = try r.ShaderProgram.create_from_file("shaders/3.1.1.debug_quad.vs", "shaders/3.1.1.debug_quad.fs");
     const shader = try r.ShaderProgram.create_from_file("shaders/3.1.2.shadow_mapping.vs", "shaders/3.1.2.shadow_mapping.fs");
@@ -293,6 +280,8 @@ pub fn main() !void {
         c.glActiveTexture(c.GL_TEXTURE_2D);
         c.glBindTexture(c.GL_TEXTURE_2D, woodTexture.texture_id);
 
+        c.glCullFace(c.GL_FRONT);
+
         // floor
         var model = mat4.identity();
         simple_depth_shader.setMat4("model", model);
@@ -302,14 +291,16 @@ pub fn main() !void {
         model = mat4.identity().scale(vec3.new(0.5, 0.5, 0.5)).translate(vec3.new(0.0, 1.5, 0.0));
         simple_depth_shader.setMat4("model", model);
         cube.draw(&stats);
-        // 
+        //
         model = mat4.identity().scale(vec3.new(0.5, 0.5, 0.5)).translate(vec3.new(2.0, 0.0, 1.0));
         simple_depth_shader.setMat4("model", model);
         cube.draw(&stats);
-        // 
+        //
         model = mat4.identity().scale(vec3.new(0.25, 0.25, 0.25)).translate(vec3.new(1.0, 0.0, 1.0));
         simple_depth_shader.setMat4("model", model);
         cube.draw(&stats);
+
+        c.glCullFace(c.GL_BACK);
 
         // reset viewport
         c.glBindFramebuffer(c.GL_FRAMEBUFFER, 0);
