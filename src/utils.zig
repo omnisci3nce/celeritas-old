@@ -1,5 +1,6 @@
-//  map, fold, filter would be nice
+const std = @import("std");
 const vec3 = @import("zalgebra").vec3;
+const c_allocator = @import("std").heap.c_allocator;
 
 // colours
 
@@ -19,4 +20,16 @@ pub fn hexToRGB (input: u32) u32 {
     const g = ((input >> 8) & 0xFF) / 255.0;
     const b = (input & 0xFF) / 255.0;
     return vec3.new(r, g, b);
+}
+
+pub fn read_from_file(path: []const u8) ![]u8 {
+    var file = try std.fs.cwd().openFile(path, .{});
+    defer file.close();
+
+    const bytes = try file.reader().readAllAlloc(
+        c_allocator,
+        100000000,
+    );
+    
+    return bytes;
 }

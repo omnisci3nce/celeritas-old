@@ -8,18 +8,18 @@ const warn = std.debug.warn;
 const panic = std.debug.panic;
 const c = @import("c.zig");
 const c_allocator = @import("std").heap.c_allocator;
-const r = @import("rendering.zig");
 const za = @import("zalgebra");
 const mat4 = za.Mat4;
 const vec3 = za.Vec3;
-const stdMath = std.math;
-const cos = stdMath.cos;
-const sin = stdMath.sin;
+const cos = std.math.cos;
+const sin = std.math.sin;
 const obj_loader = @import("loaders/obj.zig");
+const r = @import("rendering.zig");
 const Mesh = r.Mesh;
 const Cube = r.Cube;
 const plane = @import("plane.zig");
 const engine = @import("engine.zig");
+const read_from_file = @import("utils.zig").read_from_file;
 
 const width: i32 = 800;
 const height: i32 = 600;
@@ -54,7 +54,7 @@ fn init() bool {
     c.glfwWindowHint(c.GLFW_OPENGL_FORWARD_COMPAT, c.GL_TRUE);
     c.glfwWindowHint(c.GLFW_OPENGL_PROFILE, c.GLFW_OPENGL_CORE_PROFILE);
     c.glfwWindowHint(c.GLFW_COCOA_RETINA_FRAMEBUFFER, c.GL_FALSE);
-    // c.glfwWindowHint(c.GLFW_OPENGL_DEBUG_CONTEXT, debug_gl.is_on);
+    c.glfwWindowHint(c.GLFW_OPENGL_DEBUG_CONTEXT, c.GL_TRUE);
     c.glfwWindowHint(c.GLFW_SAMPLES, 4);                // 4x antialiasing
 
     window = c.glfwCreateWindow(width, height, "Celeritas - demo", null, null) orelse {
@@ -75,11 +75,6 @@ fn init() bool {
 }
 
 pub fn main() !void {
-    // create an allocator to use
-    const alloc = std.heap.page_allocator;
-    const memory = try alloc.alloc(u8, 100);
-    defer alloc.free(memory);
-
     _ = init();
     var stats = engine.FrameStats{ .drawcall_count = 0, .shader_switch_count = 0, .triangle_count = 0, .frame_time = 0 };
 
@@ -88,47 +83,17 @@ pub fn main() !void {
     const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
     std.debug.print("Num materials: {d}\n", .{asset_model.meshes.len});
 
-    var container_file = try std.fs.cwd().openFile("assets/container2.png", .{});
-    defer container_file.close();
-
-    const container_src = try container_file.reader().readAllAlloc(
-        c_allocator,
-        100000000,
-    );
-    defer c_allocator.free(container_src);
-
-    var wood_file = try std.fs.cwd().openFile("assets/wood.png", .{});
-    defer wood_file.close();
-    const wood_src = try wood_file.reader().readAllAlloc(
-        c_allocator,
-        100000000,
-    );
-    defer c_allocator.free(wood_src);
-
-    // var container_file2 = try std.fs.cwd().openFile("assets/container2_specular.png", .{});
-    // defer container_file2.close();
-
-    // const container_src2 = try container_file2.reader().readAllAlloc(
-    //     c_allocator,
-    //     100000000,
-    // );
-    // defer c_allocator.free(container_src2);
+    // ---- textures
+    var wood_img = try read_from_file("assets/wood.png");
+    defer c_allocator.free(wood_img);
+    var woodTexture = try r.Texture.create(wood_img);
 
     // ---- shaders
     const simple_depth_shader = try r.ShaderProgram.create_from_file("shaders/3.1.1.shadow_mapping_depth.vs", "shaders/3.1.1.shadow_mapping_depth.fs");
     const debug_depth_quad = try r.ShaderProgram.create_from_file("shaders/3.1.1.debug_quad.vs", "shaders/3.1.1.debug_quad.fs");
     const shader = try r.ShaderProgram.create_from_file("shaders/3.1.2.shadow_mapping.vs", "shaders/3.1.2.shadow_mapping.fs");
 
-    // ---- textures
-    // std.debug.print("Loading diffuse container png\n", .{});
-    // var diffuse = try r.Texture.create(container_src);
-    // std.debug.print("Loading specular container png\n", .{});
-    // var specular = try r.Texture.create(container_src2);
-
-    var woodTexture = try r.Texture.create(wood_src);
-
     const cube = try Cube.create(simple_depth_shader);
-    // const floor = try Cube.create(simple_depth_shader);
 
     // Floor - plane
     var planeVAO: u32 = undefined;
@@ -293,7 +258,7 @@ pub fn main() !void {
         simple_depth_shader.setMat4("model", model);
         c.glBindVertexArray(planeVAO);
         c.glDrawArrays(c.GL_TRIANGLES, 0, 6);
-        //cubes
+        // 3 cubes
         model = mat4.identity().scale(vec3.new(0.5, 0.5, 0.5)).translate(vec3.new(0.0, 1.5, 0.0));
         simple_depth_shader.setMat4("model", model);
         cube.draw(&stats);
@@ -350,7 +315,7 @@ pub fn main() !void {
         cube.draw(&stats);
 
 
-        // --- debug
+        // --- debug depth map
         // c.glUseProgram(debug_depth_quad.program_id);
         // debug_depth_quad.setFloat("near_plane", near_plane);
         // debug_depth_quad.setFloat("far_plane", far_plane);
@@ -488,10 +453,6 @@ fn process_input(win: ?*c.GLFWwindow) void {
     if (c.glfwGetKey(win, c.GLFW_KEY_D) == c.GLFW_PRESS) {
         camera.pos = vec3.add(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
     }
-    // Toggle wireframe
-    // if (c.glfwGetKey(win, c.GLFW_KEY_TAB) == c.GLFW_PRESS) {
-        
-    // }
 }
 
 // callbacks

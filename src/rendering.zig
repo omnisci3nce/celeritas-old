@@ -80,7 +80,6 @@ pub const Texture = struct {
 
     pub fn create(text: []const u8) !Texture {
         var tex: Texture = undefined;
-        // const alloc = c_allocator; // TODO: CHANGE
 
         var img = try Image.create(text);
 
