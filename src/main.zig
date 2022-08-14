@@ -1,3 +1,8 @@
+// Celeritas engine
+// W/A/S/D - Move forward/backward/left/right
+// Move mouse - Move camera
+// TODO: Tab - toggle wireframe mode
+
 const std = @import("std");
 const warn = std.debug.warn;
 const panic = std.debug.panic;
@@ -32,6 +37,7 @@ const cube_positions = @import("cube.zig").positions;
 const light_pos = vec3.new(1.2, 1.0, 2.0);
 
 var camera = r.Camera.create(vec3.new(0.0, 0.0, 3.0), vec3.new(0.0, 0.0, -1.0), vec3.new(0.0, 1.0, 0.0));
+var wireframe_mode = false;
 
 var delta_time: f64 = 0.0;
 var last_frame: f64 = 0.0;
@@ -47,9 +53,9 @@ fn init() bool {
     c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MINOR, 3);
     c.glfwWindowHint(c.GLFW_OPENGL_FORWARD_COMPAT, c.GL_TRUE);
     c.glfwWindowHint(c.GLFW_OPENGL_PROFILE, c.GLFW_OPENGL_CORE_PROFILE);
-    // c.glfwWindowHint(c.GLFW_COCOA_RETINA_FRAMEBUFFER, c.GL_FALSE);
+    c.glfwWindowHint(c.GLFW_COCOA_RETINA_FRAMEBUFFER, c.GL_FALSE);
     // c.glfwWindowHint(c.GLFW_OPENGL_DEBUG_CONTEXT, debug_gl.is_on);
-    // c.glfwWindowHint(c.GLFW_SAMPLES, 4);                // 4x antialiasing
+    c.glfwWindowHint(c.GLFW_SAMPLES, 4);                // 4x antialiasing
 
     window = c.glfwCreateWindow(width, height, "Celeritas - demo", null, null) orelse {
         panic("unable to create window\n", .{});
@@ -79,17 +85,17 @@ pub fn main() !void {
 
     // ---- meshes
     // TODO: abstract load_obj and openFile + defer into single line functions
-    // const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
-    // std.debug.print("Num materials: {d}\n", .{asset_model.meshes.len});
+    const asset_model = try obj_loader.load_obj("assets/backpack/backpack.obj");
+    std.debug.print("Num materials: {d}\n", .{asset_model.meshes.len});
 
-    // var container_file = try std.fs.cwd().openFile("assets/container2.png", .{});
-    // defer container_file.close();
+    var container_file = try std.fs.cwd().openFile("assets/container2.png", .{});
+    defer container_file.close();
 
-    // const container_src = try container_file.reader().readAllAlloc(
-    //     c_allocator,
-    //     100000000,
-    // );
-    // defer c_allocator.free(container_src);
+    const container_src = try container_file.reader().readAllAlloc(
+        c_allocator,
+        100000000,
+    );
+    defer c_allocator.free(container_src);
 
     var wood_file = try std.fs.cwd().openFile("assets/wood.png", .{});
     defer wood_file.close();
@@ -355,8 +361,6 @@ pub fn main() !void {
         // c.glBindVertexArray(0);
 
 
-        // c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
-
         {
             // render cubes
             // c.glUseProgram(lighting_shader.program_id);
@@ -484,6 +488,10 @@ fn process_input(win: ?*c.GLFWwindow) void {
     if (c.glfwGetKey(win, c.GLFW_KEY_D) == c.GLFW_PRESS) {
         camera.pos = vec3.add(camera.pos, vec3.scale(vec3.cross(camera.front, camera.up), camera_speed));
     }
+    // Toggle wireframe
+    // if (c.glfwGetKey(win, c.GLFW_KEY_TAB) == c.GLFW_PRESS) {
+        
+    // }
 }
 
 // callbacks
@@ -498,6 +506,15 @@ fn key_callback(win: ?*c.GLFWwindow, key: c_int, scancode: c_int, action: c_int,
         switch (key) {
             c.GLFW_KEY_ESCAPE => c.glfwSetWindowShouldClose(win, c.GL_TRUE),
             else => {},
+        }
+    }
+    if (key == c.GLFW_KEY_TAB and action == c.GLFW_PRESS) {
+        if (wireframe_mode == false) {
+            wireframe_mode = true;
+            c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_LINE );
+        } else {
+            wireframe_mode = false;
+            c.glPolygonMode(c.GL_FRONT_AND_BACK, c.GL_FILL );
         }
     }
     return;
